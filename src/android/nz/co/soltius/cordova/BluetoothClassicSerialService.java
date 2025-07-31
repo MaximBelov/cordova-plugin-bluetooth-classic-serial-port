@@ -55,7 +55,6 @@ public class BluetoothClassicSerialService {
     public static final int STATE_CONNECTING = 2; // now initiating an outgoing connection
     public static final int STATE_CONNECTED = 3;  // now connected to a remote device
 
-    public String connectedUUID;
 
     /**
      * Constructor. Prepares a new BluetoothSerial session.
@@ -109,8 +108,6 @@ public class BluetoothClassicSerialService {
      */
     public synchronized void connect(BluetoothDevice device, UUID uuidConnect, boolean secure) {
         if (D) Log.d(TAG, "connect to: " + device);
-
-        connectedUUID = uuidConnect.toString();
 
         // Cancel any thread attempting to make a connection
         if (mState == STATE_CONNECTING) {
@@ -170,7 +167,6 @@ public class BluetoothClassicSerialService {
             mConnectedThread = null;
         }
 
-        connectedUUID = "";
         setState(STATE_NONE);
     }
 

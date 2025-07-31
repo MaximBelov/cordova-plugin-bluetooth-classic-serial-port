@@ -9,6 +9,7 @@
         // Set the accessory and protocol string against the object
         self.accessory = accessory;
         self.protocolString = protocolString;
+        self.connectionId = accessory.connectionID;
         self.commandDelegate = commandDelegate;
 
         // Initialize properties

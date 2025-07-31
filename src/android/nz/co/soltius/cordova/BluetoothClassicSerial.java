@@ -1,6 +1,5 @@
 package nz.co.soltius.cordova;
 
-import android.Manifest;
 import android.content.pm.PackageManager;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -51,6 +50,7 @@ public class BluetoothClassicSerial extends CordovaPlugin {
     private static final String CONNECT = "connect";
     private static final String CONNECT_INSECURE = "connectInsecure";
     private static final String DISCONNECT = "disconnect";
+    private static final String DISCONNECT_ALL = "disconnectAll";
     private static final String WRITE = "write";
     private static final String AVAILABLE = "available";
     private static final String READ = "read";
@@ -68,15 +68,10 @@ public class BluetoothClassicSerial extends CordovaPlugin {
     private static final String SET_DEVICE_DISCOVERED_LISTENER = "setDeviceDiscoveredListener";
     private static final String CLEAR_DEVICE_DISCOVERED_LISTENER = "clearDeviceDiscoveredListener";
 
-    // callbacks
-    // private CallbackContext connectCallback;
-    // private CallbackContext dataAvailableCallback;
-    // private CallbackContext rawDataAvailableCallback;
     private CallbackContext enableBluetoothCallback;
     private CallbackContext deviceDiscoveredCallback;
 
     private BluetoothAdapter bluetoothAdapter;
-    // private BluetoothClassicSerialService bluetoothClassicSerialService;
 
     // Debugging
     private static final String TAG = "BluetoothClassicSerial";
@@ -94,9 +89,6 @@ public class BluetoothClassicSerial extends CordovaPlugin {
     // Key names received from the BluetoothChatService Handler
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
-
-    //StringBuffer buffer = new StringBuffer();
-    //private String delimiter;
 
     private static final int REQUEST_ENABLE_BLUETOOTH = 1;
     private static final int REQUEST_LIST_BONDED_DEVICES = 2;
@@ -134,32 +126,28 @@ public class BluetoothClassicSerial extends CordovaPlugin {
 
         } else if (action.equals(CONNECT)) {
 
-            boolean secure = true;
-            connect(args, secure, callbackContext);
+            connect(args, true, callbackContext);
 
         } else if (action.equals(CONNECT_INSECURE)) {
 
             // see Android docs about Insecure RFCOMM http://goo.gl/1mFjZY
-            boolean secure = false;
-            connect(args, secure, callbackContext);
+            connect(args, false, callbackContext);
 
         } else if (action.equals(DISCONNECT)) {
 
             disconnect(args, callbackContext);
 
-//            connectCallback = null;
-//            bluetoothClassicSerialService.stop();
-//            callbackContext.success();
+        } else if (action.equals(DISCONNECT_ALL)) {
+
+            disconnectAll(callbackContext);
 
         } else {
             if (action.equals(WRITE)) {
 
                 String macAddress = args.getString(0);
-                byte[] data = args.getArrayBuffer(1);
+                byte[] data = args.getArrayBuffer(2);
 
-                InterfaceContext ic;
-
-                ic = getInterfaceContext(macAddress);
+                InterfaceContext ic = getInterfaceContext(macAddress);
 
                 if (ic != null) {
                     ic.bluetoothClassicSerialService.write(data);
@@ -194,14 +182,14 @@ public class BluetoothClassicSerial extends CordovaPlugin {
             } else if (action.equals(READ_UNTIL)) {
 
                 String macAddress = args.getString(0);
-                String delim = args.getString(1);
+                String delimiter = args.getString(2);
                 String readText = "";
                 InterfaceContext ic;
 
                 ic = getInterfaceContext(macAddress);
 
                 if (ic != null) {
-                    readText = ic.readUntil(delim);
+                    readText = ic.readUntil(delimiter);
                 }
 
                 callbackContext.success(readText);
@@ -209,12 +197,9 @@ public class BluetoothClassicSerial extends CordovaPlugin {
             } else if (action.equals(SUBSCRIBE)) {
 
                 String macAddress = args.getString(0);
-                String delim = args.getString(1);
+                String delimiter = args.getString(2);
 
-                setContextSubscribe(macAddress, callbackContext, delim);
-
-                // dataAvailableCallback = callbackContext;
-
+                setContextSubscribe(macAddress, callbackContext, delimiter);
                 PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
                 result.setKeepCallback(true);
                 callbackContext.sendPluginResult(result);
@@ -225,17 +210,12 @@ public class BluetoothClassicSerial extends CordovaPlugin {
 
                 setContextSubscribe(macAddress, null, null);
 
-                // send no result, so Cordova won't hold onto the data available callback
-                // anymore
-                // PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
-                // callbackContext.sendPluginResult(result);
                 callbackContext.success();
 
             } else if (action.equals(SUBSCRIBE_RAW)) {
 
                 String macAddress = args.getString(0);
 
-                // rawDataAvailableCallback = callbackContext;
                 setContextRawSubscribe(macAddress, callbackContext);
 
                 PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
@@ -246,8 +226,6 @@ public class BluetoothClassicSerial extends CordovaPlugin {
 
                 String macAddress = args.getString(0);
                 setContextRawSubscribe(macAddress, null);
-
-                // rawDataAvailableCallback = null;
 
                 callbackContext.success();
 
@@ -328,12 +306,7 @@ public class BluetoothClassicSerial extends CordovaPlugin {
     @Override
     public void onDestroy() {
         super.onDestroy();
-
         destroy();
-
-//        if (bluetoothClassicSerialService != null) {
-//            bluetoothClassicSerialService.stop();
-//        }
     }
 
     // https://github.com/don/cordova-plugin-ble-central/blob/master/src/android/BLECentralPlugin.java#L1200
@@ -425,7 +398,7 @@ public class BluetoothClassicSerial extends CordovaPlugin {
         private boolean mConnected = false;
 
         // The Handler that gets information back from the BluetoothClassicSerialService
-        // Original code used handler for the because it was talking to the UI.
+        // Original code used a handler for the because it was talking to the UI.
         // Consider replacing with normal callbacks
         private final Handler mHandler;
 
@@ -564,7 +537,7 @@ public class BluetoothClassicSerial extends CordovaPlugin {
 
             String data = readUntil(delimiter);
 
-            if (data != null && data.length() > 0) {
+            if (data != null && !data.isEmpty()) {
                 PluginResult result = new PluginResult(PluginResult.Status.OK, data);
                 result.setKeepCallback(true);
                 dataAvailableCallback.sendPluginResult(result);
@@ -697,7 +670,6 @@ public class BluetoothClassicSerial extends CordovaPlugin {
         UUID connectUuid;
         InterfaceContext interfaceContext;
         BluetoothClassicSerialService blueService;
-        HashMap<String, InterfaceContext> deviceMap;
 
 
         destroy(macAddress);
@@ -718,10 +690,8 @@ public class BluetoothClassicSerial extends CordovaPlugin {
                     connections.put(macAddress, interfaceContext);
                 }
 
-                if (interfaceContext != null) {
-                    blueService = interfaceContext.bluetoothClassicSerialService;
-                    blueService.connect(device, connectUuid, secure);
-                }
+              blueService = interfaceContext.bluetoothClassicSerialService;
+              blueService.connect(device, connectUuid, secure);
             }
 
             PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
@@ -736,23 +706,27 @@ public class BluetoothClassicSerial extends CordovaPlugin {
     private void disconnect(CordovaArgs args, CallbackContext callbackContext) throws JSONException {
 
         InterfaceContext ic;
+        String macAddress = args.getString(0);
 
-        if (args != null && args.getString(0) != null) {
-
-            String macAddress = args.getString(0);
+        if (macAddress != null) {
             ic = connections.get(macAddress);
             if (ic != null && ic.bluetoothClassicSerialService != null) {
                 ic.bluetoothClassicSerialService.stop();
             }
-
+            callbackContext.success();
         } else {
-            Iterator<Map.Entry<String, InterfaceContext>> connectionsIterators = connections.entrySet().iterator();
+            callbackContext.error("No Interface");
 
-            while (connectionsIterators.hasNext()) {
-                InterfaceContext connectionsIterator = connectionsIterators.next().getValue();
-                if (connectionsIterator.bluetoothClassicSerialService != null) {
-                    connectionsIterator.bluetoothClassicSerialService.stop();
-                }
+        }
+
+    }
+
+    private void disconnectAll(CallbackContext callbackContext) {
+
+        for (Map.Entry<String, InterfaceContext> stringInterfaceContextEntry : connections.entrySet()) {
+            InterfaceContext connectionsIterator = stringInterfaceContextEntry.getValue();
+            if (connectionsIterator.bluetoothClassicSerialService != null) {
+                connectionsIterator.bluetoothClassicSerialService.stop();
             }
         }
 
@@ -783,7 +757,7 @@ public class BluetoothClassicSerial extends CordovaPlugin {
 
     private void setContextSubscribe(String macAddress, CallbackContext cc, String delimiter) {
 
-        InterfaceContext ic = null;
+        InterfaceContext ic;
 
         ic = getInterfaceContext(macAddress);
 
@@ -792,19 +766,16 @@ public class BluetoothClassicSerial extends CordovaPlugin {
             setInterfaceContext(macAddress, ic);
         }
 
-        if (ic != null) {
+        ic.dataAvailableCallback = cc;
+        ic.delimiter = delimiter;
 
-            ic.dataAvailableCallback = cc;
-            ic.delimiter = delimiter;
-
-            setInterfaceContext(macAddress, ic);
-        }
+        setInterfaceContext(macAddress, ic);
 
     }
 
     private void setContextRawSubscribe(String macAddress, CallbackContext cc) {
 
-        InterfaceContext ic = null;
+        InterfaceContext ic;
 
         ic = getInterfaceContext(macAddress);
 
@@ -813,10 +784,8 @@ public class BluetoothClassicSerial extends CordovaPlugin {
             setInterfaceContext(macAddress, ic);
         }
 
-        if (ic != null) {
-            ic.rawDataAvailableCallback = cc;
-            setInterfaceContext(macAddress, ic);
-        }
+      ic.rawDataAvailableCallback = cc;
+      setInterfaceContext(macAddress, ic);
 
     }
 

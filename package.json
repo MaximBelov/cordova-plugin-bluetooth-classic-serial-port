@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-bluetooth-classic-serial-port",
-  "version": "0.9.16",
+  "version": "1.0.0",
   "description": "Cordova Bluetooth Serial Port Profile Communication Plugin",
   "cordova": {
     "id": "cordova-plugin-bluetooth-classic-serial-port",

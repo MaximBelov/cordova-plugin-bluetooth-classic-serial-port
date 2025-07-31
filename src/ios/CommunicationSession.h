@@ -87,6 +87,7 @@
 @property (nonatomic, strong) EAAccessory *accessory;
 @property (nonatomic, weak) id <CDVCommandDelegate> commandDelegate;
 @property (nonatomic, strong) NSString *protocolString;
+@property (nonatomic, assign) NSUInteger connectionId;
 @property (nonatomic, strong) NSMutableData *readBuffer;
 @property (nonatomic, strong) NSMutableData *writeBuffer;
 @property (nonatomic) uint8_t inputBufferSize;

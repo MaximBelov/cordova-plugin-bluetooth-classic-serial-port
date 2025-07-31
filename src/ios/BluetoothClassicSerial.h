@@ -198,9 +198,14 @@
 
 
 /*!
+ @brief Close the communication session with the connected device.
+ */
+- (void)closeCommunicationSession:(NSUInteger)connectionId protocolString:(NSString*)protocolString;
+
+/*!
  @brief Close the communication sessions with the connected device.
  */
-- (void)closeCommunicationSessions;
+- (void)closeCommunicationSessions:(NSUInteger)connectionId protocolStrings:(NSArray *)protocolStrings;
 
 /*!
  @brief Open a communication session for an accessory with a given connectionID and a given protocolString
@@ -240,10 +245,9 @@
 
 
 /*!
- @brief Get the active communication session for a particular protocol string.
+ @brief Get the active communication session for a connectionId and particular protocol string.
  */
-- (CommunicationSession*)getCommunicationSessionForProtocolString: (NSString *)protocolString;
-
+- (CommunicationSession *)getCommunicationSession:(NSUInteger)connectionId protocolString:(NSString *)protocolString;
 
 @property (nonatomic, strong) NSString *deviceDiscoveredCallbackID;
 @property (nonatomic, strong) NSString *sessionDataReadCallbackID;

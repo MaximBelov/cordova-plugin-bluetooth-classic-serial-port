@@ -1,14 +1,11 @@
 # Bluetooth Classic Serial Plugin for Cordova
 
-This plugin enables serial communication over Bluetooth. It is a fork of https://github.com/don/BluetoothSerial and https://github.com/soltius/BluetoothClassicSerial.
+This plugin enables serial communication over Bluetooth. 
 
-The core difference is that https://github.com/don/BluetoothSerial supports Bluetooth Low Energy on iOS. 
+It is a fork of https://github.com/don/BluetoothSerial and https://github.com/soltius/BluetoothClassicSerial.
 
 This plugin is written using the [iOS Accessory Framework](https://developer.apple.com/documentation/externalaccessory/) (MFi) to support Classic Bluetooth on iOS.
 
-## TODO
-
-- Check and fix documentation
 
 ## Supported Platforms
 
@@ -38,7 +35,7 @@ Add a new section to config.xml
         </config-file>
     </platform>
 
-See [Documentation](https://developer.apple.com/documentation/bundleresources/information_property_list/uibackgroundmodes) .
+See [Documentation](https://developer.apple.com/documentation/bundleresources/information_property_list/uibackgroundmodes).
 
 # Installing
 
@@ -79,9 +76,13 @@ To include the default set of permissions the plugin installs on Android SDK v33
 
 For the best understanding about which permissions are needed for which combinations of target SDK version & OS version, see [Android Bluetooth permissions](https://developer.android.com/guide/topics/connectivity/bluetooth/permissions)
 
-## Ionic
+## Ionic Production
 
     $ npm i @awesome-cordova-plugins/bluetooth-classic-serial-port
+
+## Ionic Development
+
+    $ npm i @awesome-cordova-plugins-hotfix/bluetooth-classic-serial-port
 
 ## iOS Notes
 
@@ -118,6 +119,7 @@ If you need to connect to another, disconnect, then connect to the required devi
 - [bluetoothClassicSerial.connect](#connect)
 - [bluetoothClassicSerial.connectInsecure](#connectInsecure)
 - [bluetoothClassicSerial.disconnect](#disconnect)
+- [bluetoothClassicSerial.disconnectAll](#disconnectAll)
 - [bluetoothClassicSerial.write](#write)
 - [bluetoothClassicSerial.available](#available)
 - [bluetoothClassicSerial.read](#read)
@@ -155,7 +157,7 @@ If a device has multiple interfaces then you can connect to them by providing th
 #### Android
 
 - __deviceId__: Identifier of the remote device. For Android this is the MAC address.
-- __interfaceIdArray__: This identifies the serial port to connect to. For Android this is the SPP_UUID. A common SPP_UUID string is "00001101-0000-1000-8000-00805F9B34FB".  The device doumentation should provide the SPP_UUID.
+- __interfaceIdArray__: This identifies the serial port to connect to. For Android this is the SPP_UUID. A common SPP_UUID string is "00001101-0000-1000-8000-00805F9B34FB".  The device documentation should provide the SPP_UUID.
 
 #### iOS
 
@@ -192,7 +194,7 @@ For Android, see [connect](#connect).
 
 ## disconnect
 ```
-bluetoothClassicSerial.disconnect(success, failure);
+bluetoothClassicSerial.disconnect(deviceId, interfaceId, success, failure);
 ```
 
 ### Description
@@ -201,14 +203,31 @@ Function `disconnect` disconnects the current connection.
 
 ### Parameters
 
+- __deviceId__: Identifier of the remote device. For Android this is the MAC address.
+- __interfaceId__: The interface to disconnect
 - __success__: Success callback function that is invoked when the connection is successful. [optional]
+- __failure__: Error callback function, invoked when error occurs. [optional]
+
+
+## disconnect
+```
+bluetoothClassicSerial.disconnectAll(success, failure);
+```
+
+### Description
+
+Function `disconnectAll` disconnects all connections.
+
+### Parameters
+
+- __success__: Success callback function that is invoked when the disconnection is successful. [optional]
 - __failure__: Error callback function, invoked when error occurs. [optional]
 
 ## write
 
 Writes data to the serial port.
 ```
-bluetoothClassicSerial.write(interfaceId, data, success, failure);
+bluetoothClassicSerial.write(deviceId, interfaceId, data, success, failure);
 ```
 
 ### Description
@@ -219,6 +238,7 @@ Internally string, integer array, and Uint8Array are converted to an ArrayBuffer
 
 ### Parameters
 
+- __deviceId__: Identifier of the remote device. For Android this is the MAC address.
 - __interfaceId__: The interface to send the data to
 - __data__: ArrayBuffer of data
 - __success__: Success callback function that is invoked when the connection is successful. [optional]
@@ -227,10 +247,10 @@ Internally string, integer array, and Uint8Array are converted to an ArrayBuffer
 ### Quick Example
 ```
 // string
-bluetoothClassicSerial.write("00001101-0000-1000-8000-00805F9B34FB", "hello, world", success, failure);
+bluetoothClassicSerial.write(deviceId, "00001101-0000-1000-8000-00805F9B34FB", "hello, world", success, failure);
 
 // array of int (or bytes)
-bluetoothClassicSerial.write("00001101-0000-1000-8000-00805F9B34FB", [186, 220, 222], success, failure);
+bluetoothClassicSerial.write(deviceId, "00001101-0000-1000-8000-00805F9B34FB", [186, 220, 222], success, failure);
 
 // Typed Array
 var data = new Uint8Array(4);
@@ -238,17 +258,17 @@ data[0] = 0x41;
 data[1] = 0x42;
 data[2] = 0x43;
 data[3] = 0x44;
-bluetoothClassicSerial.write(interfaceId, data, success, failure);
+bluetoothClassicSerial.write(deviceId, interfaceId, data, success, failure);
 
 // Array Buffer
-bluetoothClassicSerial.write(interfaceId, data.buffer, success, failure);
+bluetoothClassicSerial.write(deviceId, interfaceId, data.buffer, success, failure);
 ```
 
 ## available
 
 Gets the number of bytes of data available.
 ```
-bluetoothClassicSerial.available(interfaceId, success, failure);
+bluetoothClassicSerial.available(deviceId, interfaceId, success, failure);
 ```
 
 ### Description
@@ -261,20 +281,21 @@ Function `available` gets the number of bytes of data available.  The bytes are 
 
 ### Parameters
 
+- __deviceId__: Identifier of the remote device. For Android this is the MAC address.
 - __interfaceId__: The interface to check
 - __success__: Success callback function that is invoked when the connection is successful. [optional]
 - __failure__: Error callback function, invoked when error occurs. [optional]
 
 ### Quick Example
 ```
-bluetoothClassicSerial.available("00001101-0000-1000-8000-00805F9B34FB", function (numBytes) { console.log("There are " + numBytes + " available to read."); }, failure);
+bluetoothClassicSerial.available(deviceid, "00001101-0000-1000-8000-00805F9B34FB", function (numBytes) { console.log("There are " + numBytes + " available to read."); }, failure);
 ```
 
 ## read
 
 Reads data from the buffer.
 ```
-bluetoothClassicSerial.read(interfaceId, success, failure);
+bluetoothClassicSerial.read(deviceId, interfaceId, success, failure);
 ```
 
 ### Description
@@ -283,19 +304,22 @@ Function `read` reads the data from the buffer. The data is passed to the succes
 
 ### Parameters
 
+- __deviceId__: Identifier of the remote device. For Android this is the MAC address.
 - __interfaceId__: The interface to read
 - __success__: Success callback function that is invoked with the number of bytes available to be read.
 - __failure__: Error callback function, invoked when error occurs. [optional]
 
 ### Quick Example
 ```
-bluetoothClassicSerial.read("00001101-0000-1000-8000-00805F9B34FB", function (data) { console.log(data);}, failure);
+bluetoothClassicSerial.read(deviceId, "00001101-0000-1000-8000-00805F9B34FB", function (data) { console.log(data);}, failure);
 ```
+
 ## readUntil
 
 Reads data from the buffer until it reaches a delimiter.
 
-    bluetoothClassicSerial.readUntil(interfaceId, '\n', success, failure);
+    bluetoothClassicSerial.readUntil(deviceId, interfaceId, '\n', success, failure);
+
 
 ### Description
 
@@ -303,6 +327,7 @@ Function `readUntil` reads the data from the buffer until it reaches a delimiter
 
 ### Parameters
 
+- __deviceId__: Identifier of the remote device. For Android this is the MAC address.
 - __interfaceId__: The interface to read
 - __delimiter__: delimiter
 - __success__: Success callback function that is invoked with the data.
@@ -310,14 +335,14 @@ Function `readUntil` reads the data from the buffer until it reaches a delimiter
 
 ### Quick Example
 ```
-bluetoothClassicSerial.readUntil("00001101-0000-1000-8000-00805F9B34FB", '\n', function (data) {console.log(data);}, failure);
+    bluetoothClassicSerial.readUntil(deviceId, "00001101-0000-1000-8000-00805F9B34FB", '\n', function (data) {console.log(data);}, failure);
 ```
 
 ## subscribe
 
 Subscribe to be notified when data is received.
 
-    bluetoothClassicSerial.subscribe(interfaceId, '\n', success, failure);
+    bluetoothClassicSerial.subscribe(deviceId, interfaceId, '\n', success, failure);
 
 ### Description
 
@@ -325,6 +350,7 @@ Function `subscribe` registers a callback that is called when data is received. 
 
 ### Parameters
 
+- __deviceId__: Identifier of the remote device. For Android this is the MAC address.
 - __interfaceId__: The interface to subscribe to
 - __delimiter__: delimiter
 - __success__: Success callback function that is invoked with the data.
@@ -333,7 +359,7 @@ Function `subscribe` registers a callback that is called when data is received. 
 ### Quick Example
 ```
 // the success callback is called whenever data is received
-bluetoothClassicSerial.subscribe("00:AA:DD:DD:1A:2D", '\n', function (data) {
+bluetoothClassicSerial.subscribe(deviceId, "00:AA:DD:DD:1A:2D", '\n', function (data) {
     console.log(data);
 }, failure);
 ```
@@ -342,7 +368,7 @@ bluetoothClassicSerial.subscribe("00:AA:DD:DD:1A:2D", '\n', function (data) {
 
 Unsubscribe from a subscription.
 
-    bluetoothClassicSerial.unsubscribe(interfaceId, success, failure);
+    bluetoothClassicSerial.unsubscribe(deviceId, interfaceId, success, failure);
 
 ### Description
 
@@ -350,19 +376,20 @@ Function `unsubscribe` removes any notification added by `subscribe` and kills t
 
 ### Parameters
 
+- __deviceId__: Identifier of the remote device. For Android this is the MAC address.
 - __interfaceId__: The interface to unsubscribe from
 - __success__: Success callback function that is invoked when the connection is successful. [optional]
 - __failure__: Error callback function, invoked when error occurs. [optional]
 
 ### Quick Example
 
-    bluetoothClassicSerial.unsubscribe();
+    bluetoothClassicSerial.unsubscribe(deviceId, interfaceId, console.log, console.error);
 
 ## subscribeRawData
 
 Subscribe to be notified when data is received.
 
-    bluetoothClassicSerial.subscribeRawData(interfaceId, success, failure);
+    bluetoothClassicSerial.subscribeRawData(deviceId, interfaceId, success, failure);
 
 ### Description
 
@@ -370,6 +397,7 @@ Function `subscribeRawData` registers a callback that is called when data is rec
 
 ### Parameters
 
+- __deviceId__: Identifier of the remote device. For Android this is the MAC address.
 - __interfaceId__: The interface to subscribe to
 - __success__: Success callback function that is invoked with the data.
 - __failure__: Error callback function, invoked when error occurs. [optional]
@@ -377,7 +405,7 @@ Function `subscribeRawData` registers a callback that is called when data is rec
 ### Quick Example
 ```
 // the success callback is called whenever data is received
-bluetoothClassicSerial.subscribeRawData(function (data) {
+bluetoothClassicSerial.subscribeRawData(deviceId, interfaceId, function (data) {
     var bytes = new Uint8Array(data);
     console.log(bytes);
 }, failure);
@@ -387,7 +415,7 @@ bluetoothClassicSerial.subscribeRawData(function (data) {
 
 Unsubscribe from a subscription.
 
-    bluetoothClassicSerial.unsubscribeRawData(interfaceId, success, failure);
+    bluetoothClassicSerial.unsubscribeRawData(deviceId, interfaceId, success, failure);
 
 ### Description
 
@@ -395,20 +423,21 @@ Function `unsubscribeRawData` removes any notification added by `subscribeRawDat
 
 ### Parameters
 
+- __deviceId__: Identifier of the remote device. For Android this is the MAC address.
 - __interfaceId__: The interface to unsubscribe from
 - __success__: Success callback function that is invoked when the unsubscribe is successful. [optional]
 - __failure__: Error callback function, invoked when error occurs. [optional]
 
 ### Quick Example
 ```
-bluetoothClassicSerial.unsubscribeRawData("00001101-0000-1000-8000-00805F9B34FB");
+bluetoothClassicSerial.unsubscribeRawData(deviceId, "00001101-0000-1000-8000-00805F9B34FB");
 ```
 
 ## clear
 
 Clears data in the buffer.
 
-    bluetoothClassicSerial.clear(interfaceId, success, failure);
+    bluetoothClassicSerial.clear(deviceId, interfaceId, success, failure);
 
 ### Description
 
@@ -437,12 +466,12 @@ Example list passed to success callback.  See [BluetoothDevice](http://developer
         "class": 276,
         "id": "10:BF:48:CB:00:00",
         "address": "10:BF:48:CB:00:00",
-        "name": "Nexus 7"
+        "name": "Device SPP"
     }, {
         "class": 7936,
         "id": "00:06:66:4D:00:00",
         "address": "00:06:66:4D:00:00",
-        "name": "RN42"
+        "name": "ESP32 Bluetooth classic"
     }]
 
 #### iOS
@@ -451,7 +480,18 @@ Function `list` lists the paired Bluetooth devices.  The success callback is cal
 
 Example list passed to success callback for iOS.
 
-    TBC
+    [{
+        "id": 12345,
+        "address": 12345,
+        "class": "",
+        "manufacturer": "Manufacturer 1",
+        "name": "MFI Device",
+        "modelNumber": "ABC123",
+        "serialNumber": "ABC123",
+        "firmwareRevision": "ABC",
+        "hardwareRevision": "ABC",
+        "protocols": [ "com.string.protocol" ]
+    }]
 
 ### Note
 
@@ -466,7 +506,7 @@ Example list passed to success callback for iOS.
 ```
 bluetoothClassicSerial.list(function(devices) {
     devices.forEach(function(device) {
-        console.log(device.id);
+        console.log(device.id, device);
     })
 }, failure);
 ```
@@ -475,7 +515,7 @@ bluetoothClassicSerial.list(function(devices) {
 
 Reports the connection status.  If all interfaces are connected then the success callback is called.  If one interface is not connected then the failure callback is called.  The connect method does not allow the status of a single interface to be determined (unless you have only specified a single interfaceId in the prior connect method).
 
-    bluetoothClassicSerial.isConnected(success, failure);
+    bluetoothClassicSerial.isConnected(deviceId, interfaceId, success, failure);
 
 ### Description
 
@@ -483,12 +523,16 @@ Function `isConnected` calls the success callback when connected to a peer and t
 
 ### Parameters
 
+- __deviceId__: Identifier of the remote device. For Android this is the MAC address.
+- __interfaceId__: The interface to unsubscribe from
 - __success__: Success callback function, invoked when device connected.
 - __failure__: Error callback function, invoked when device is NOT connected.
 
 ### Quick Example
 ```
 bluetoothClassicSerial.isConnected(
+    deviceId, 
+    interfaceId,
     function() {
         console.log("Bluetooth is connected");
     },
@@ -631,7 +675,7 @@ Function `discoverUnpaired` will launch a native iOS window showing all devices 
 ```
 bluetoothClassicSerial.discoverUnpaired(function(devices) {
     devices.forEach(function(device) {
-        console.log(device.id);
+        console.log(device.id, device);
     })
 }, failure);
 ```
@@ -664,7 +708,7 @@ When a device is paired from the [discoverUnpaired](#discoverunpaired) function 
 
 ### Parameters
 
-- __notify__: Notify callback function that is invoked when device is discovered during discovery process.
+- __notify__: Notify callback function invoked when a device is discovered during a discovery process.
 
 ### Quick Example
 ```
@@ -689,21 +733,18 @@ bluetoothClassicSerial.clearDeviceDiscoveredListener();
 ### Android
 
 Development Devices include
- * Nexus 7 (2013) with Android 6.1
- * Samsung Galaxy S6 with Android 6.0
- * Samsung Galaxy S5 with Android 5.0
+ * Samsung A04 with Android 14
 
 ### iOS
 
 Development Devices include
-  * iPhone 5s
-  * iPad Gen 4
+  * iPhone 11-16
 
 ## Props
 
 This project is a fork of Don Coleman's https://github.com/don/BluetoothSerial so all the big props to him.
 
-The multi interface implementation for Android borrowed ideas from Shikoruma's pull request https://github.com/don/BluetoothSerial/pull/205 to Don Coleman's [Cordova BluetoothSerial Plugin](https://github.com/don/BluetoothSerial).
+The multi-interface implementation for Android borrowed ideas from Shikoruma's pull request https://github.com/don/BluetoothSerial/pull/205 to Don Coleman's [Cordova BluetoothSerial Plugin](https://github.com/don/BluetoothSerial).
 
 ### Android
 
@@ -728,4 +769,4 @@ An example a properly formatted mac address is "AA:BB:CC:DD:EE:FF"
 
 ## Feedback
 
-Try the code. If you find an problem or missing feature, file an issue or create a pull request.
+Try the code. If you find a problem or missing feature, file an issue or create a pull request.
