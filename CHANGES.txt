@@ -1,3 +1,6 @@
+= 1.1.0 =
+iOS refactor: remove subscribeCallbackIds and subscribeRawCallbackIds
+
 = 1.0.0 =
 iOS allow connecting multiple devices with same protocol string
 Android & iOS Unify arguments
