@@ -212,7 +212,7 @@
  @discussion If the connectionID is passed in as 0 then the method will attempt to open a session with the first connected device that matches the provided communication protocol.
  @return NSMutableDictionary - True for session open. False for not
  */
-- (NSMutableDictionary*)openSessionForConnectionIdAndProtocolStrings:(CDVInvokedUrlCommand *)command;
+- (NSMutableDictionary*)openCommunicationSession:(CDVInvokedUrlCommand *)command;
 
 /*!
  @brief Get all the details for a given accessory
@@ -249,16 +249,9 @@
  */
 - (CommunicationSession *)getCommunicationSession:(NSUInteger)connectionId protocolString:(NSString *)protocolString;
 
-@property (nonatomic, strong) NSString *deviceDiscoveredCallbackID;
-@property (nonatomic, strong) NSString *sessionDataReadCallbackID;
+@property (nonatomic, strong) NSString *deviceDiscoveredCallbackId;
 @property CBCentralManager* bluetoothManager;
 @property (nonatomic) bool bluetoothEnabled;
 @property (nonatomic, strong) NSMutableArray *communicationSessions;
-@property (nonatomic, strong) NSMutableArray *subscribeCallbackIds;
-@property (nonatomic, strong) NSMutableArray *subscribeRawCallbackIds;
-
-
-
-
 
 @end

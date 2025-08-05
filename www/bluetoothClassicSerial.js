@@ -3,8 +3,6 @@ const exec = require('cordova/exec');
 
 module.exports = {
 
-  version: '1.0.0',
-
   connect: function (deviceId, interfaceArray, success, failure) {
 
     if (typeof interfaceArray === 'string') {

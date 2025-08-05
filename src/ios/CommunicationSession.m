@@ -5,107 +5,87 @@
 - (id)init:(EAAccessory *)accessory :(NSString *)protocolString :(id <CDVCommandDelegate>)commandDelegate  {
     self = [super init];
     if (self) {
-
-        // Set the accessory and protocol string against the object
         self.accessory = accessory;
         self.protocolString = protocolString;
         self.connectionId = accessory.connectionID;
+        self.notificationName = [NSString stringWithFormat:@"BTSubscribe_%lu_%@", (unsigned long)self.connectionId, self.protocolString];
         self.commandDelegate = commandDelegate;
-
-        // Initialize properties
         self.connectCallbackId = nil;
         self.writeBuffer = nil;
         self.readBuffer = nil;
         self.subscribeCallbackId = nil;
         self.readDelimiter = nil;
-        self.subscribeRawDataCallbackID = nil;
+        self.subscribeRawDataCallbackId = nil;
         self.inputBufferSize = 128;
-
     }
-
     return self;
 }
 
 - (void)removeSubscribeObserver {
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:self.protocolString object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:self.notificationName object:nil];
 }
 
-- (void)addSubscribeCallbackAndObserver: (NSString *)subscribeCallbackId {
+- (void)addSubscribeCallbackAndObserver:(NSString *)subscribeCallbackId withDelimiter:(NSString *)delimiter {
     [self removeSubscribeObserver];
     self.subscribeCallbackId = subscribeCallbackId;
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(sendSubscribeData:) name:self.protocolString object:nil];
+    self.readDelimiter = delimiter;
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(sendSubscribeData:) name:self.notificationName object:nil];
 }
 
 - (void)sendSubscribeData:(NSNotification *)notification {
-
-    // Make sure we have a callback method to fire
-    if (self.subscribeCallbackId != nil) {
-
+    if (self.subscribeCallbackId != nil && self.readDelimiter != nil) {
         NSString *message = [self readUntilDelimiter:self.readDelimiter];
         if ([message length] > 0) {
-            CDVPluginResult *pluginResult = nil;
-            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: message];
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:message];
             [pluginResult setKeepCallbackAsBool:TRUE];
             [self.commandDelegate sendPluginResult:pluginResult callbackId:self.subscribeCallbackId];
 
-            // Fire again until we've cleared the buffer.
+            // Fire again to consume any remaining delimited data
             [self sendSubscribeData:nil];
-
         }
-
     }
 }
 
 - (void)unsubscribe {
-
-    // Remove any subscribe callback id
+    if (self.subscribeCallbackId != nil) {
+        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_NO_RESULT];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:self.subscribeCallbackId];
+    }
     self.subscribeCallbackId = nil;
-
-    // Remove the observer.
+    self.readDelimiter = nil;
     [self removeSubscribeObserver];
-
 }
 
 - (void)unsubscribeRaw {
-    self.subscribeRawDataCallbackID = nil;
+    if (self.subscribeRawDataCallbackId != nil) {
+        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_NO_RESULT];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:self.subscribeRawDataCallbackId];
+    }
+    self.subscribeRawDataCallbackId = nil;
 }
 
-- (void)subscribeRaw: (NSString *)callbackId {
-    self.subscribeRawDataCallbackID = callbackId;
+- (void)subscribeRaw:(NSString *)callbackId {
+    self.subscribeRawDataCallbackId = callbackId;
 }
-
-
 
 - (bool)open {
-
-    self.session = [[EASession alloc] initWithAccessory:self.accessory
-                                            forProtocol:self.protocolString];
+    self.session = [[EASession alloc] initWithAccessory:self.accessory forProtocol:self.protocolString];
     if (self.session) {
         [[self.session inputStream] setDelegate:self];
-        [[self.session inputStream] scheduleInRunLoop:[NSRunLoop currentRunLoop]
-                                          forMode:NSDefaultRunLoopMode];
+        [[self.session inputStream] scheduleInRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
         [[self.session inputStream] open];
 
         [[self.session outputStream] setDelegate:self];
-        [[self.session outputStream] scheduleInRunLoop:[NSRunLoop currentRunLoop]
-                                           forMode:NSDefaultRunLoopMode];
+        [[self.session outputStream] scheduleInRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
         [[self.session outputStream] open];
-
         return true;
-
     } else {
-
         return false;
-
     }
-
 }
 
 - (void)close {
-
     if (self.session != nil) {
-
-        // Close off the input and output streams
         [[self.session inputStream] removeFromRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
         [[self.session inputStream] setDelegate:nil];
         [[self.session inputStream] close];
@@ -114,56 +94,43 @@
         [[self.session outputStream] setDelegate:nil];
         [[self.session outputStream] close];
 
-        // Reset the session
         self.session = nil;
-
     }
 
-    // Remove read and write buffers
     self.readBuffer = nil;
     self.writeBuffer = nil;
 
+    if (self.connectCallbackId != nil) {
+        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Device was manually disconnected"];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:self.connectCallbackId];
+        self.connectCallbackId = nil;
+    }
+
+    [self unsubscribe];
+    [self unsubscribeRaw];
 }
 
 - (bool)isOpen {
-
-    if (self.session == nil) {
-        return false;
-    } else {
-        return true;
-    }
-
+    return (self.session != nil);
 }
 
-- (void)appendToWriteBuffer: (NSData *)data {
-
+- (void)appendToWriteBuffer:(NSData *)data {
     if (self.writeBuffer == nil) {
         self.writeBuffer = [[NSMutableData alloc] init];
     }
-
     [self.writeBuffer appendData:data];
-
 }
 
-
--(bool)writeData {
-
-
-    while (([[self.session outputStream] hasSpaceAvailable]) && ([self.writeBuffer length] > 0))
-    {
-        // Write the bytes to the outputStream
+- (bool)writeData {
+    while (([[self.session outputStream] hasSpaceAvailable]) && ([self.writeBuffer length] > 0)) {
         NSInteger bytesWritten = [[self.session outputStream] write:[self.writeBuffer bytes] maxLength:[self.writeBuffer length]];
-
-        // If no bytes get written return false
         if (bytesWritten == -1) {
             return false;
         } else if (bytesWritten > 0) {
             [self.writeBuffer replaceBytesInRange:NSMakeRange(0, bytesWritten) withBytes:NULL length:0];
         }
     }
-
     return true;
-
 }
 
 - (NSData *)readBytesFromBuffer:(NSUInteger)bytesToRead {
@@ -177,102 +144,79 @@
 }
 
 - (NSMutableString *)read {
-
     NSUInteger bytesAvailable = 0;
     NSMutableString *dataOutput = [[NSMutableString alloc] init];
 
     while ((bytesAvailable = [self.readBuffer length]) > 0) {
         NSData *data = [self readBytesFromBuffer:bytesAvailable];
         if (data) {
-
-            NSString* dataString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+            NSString *dataString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
             if (dataString != nil) {
                 [dataOutput appendString:dataString];
             }
-
         }
     }
-
     return dataOutput;
 }
 
-- (NSString*)readUntilDelimiter:(NSString*)delimiter {
-
+- (NSString *)readUntilDelimiter:(NSString *)delimiter {
     NSString *dataString = [[NSString alloc] initWithData:self.readBuffer encoding:NSUTF8StringEncoding];
     NSRange range = [dataString rangeOfString:delimiter];
     NSString *message = @"";
 
     if (range.location != NSNotFound) {
-
-        long end = range.location + range.length;
+        NSUInteger end = range.location + range.length;
         message = [dataString substringToIndex:end];
-
         NSRange truncate = NSMakeRange(0, end);
         [self.readBuffer replaceBytesInRange:truncate withBytes:NULL length:0];
-
     }
-
     return message;
 }
 
 - (void)readStreamData {
-
     NSMutableData *rawDataRead = nil;
-    if (self.subscribeRawDataCallbackID != nil) {
+    if (self.subscribeRawDataCallbackId != nil) {
         rawDataRead = [[NSMutableData alloc] init];
     }
 
     uint8_t buf[self.inputBufferSize];
-    while ([[self.session inputStream] hasBytesAvailable])
-    {
+    while ([[self.session inputStream] hasBytesAvailable]) {
         NSInteger bytesRead = [[self.session inputStream] read:buf maxLength:self.inputBufferSize];
         if (self.readBuffer == nil) {
             self.readBuffer = [[NSMutableData alloc] init];
         }
-        [self.readBuffer appendBytes:(void *)buf length:bytesRead];
+        [self.readBuffer appendBytes:buf length:bytesRead];
 
-
-        if (self.subscribeRawDataCallbackID != nil) {
-            [rawDataRead appendBytes:(void *)buf length:bytesRead];
+        if (self.subscribeRawDataCallbackId != nil) {
+            [rawDataRead appendBytes:buf length:bytesRead];
         }
-
     }
 
-    // If someone is listening for raw data send that back.
-    if (self.subscribeRawDataCallbackID != nil && rawDataRead != nil) {
+    if (self.subscribeRawDataCallbackId != nil && rawDataRead != nil) {
         CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArrayBuffer:rawDataRead];
         [pluginResult setKeepCallbackAsBool:true];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:self.subscribeRawDataCallbackID];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:self.subscribeRawDataCallbackId];
     }
 
-    // When data is read in from the session send to the received notification.
-    [[NSNotificationCenter defaultCenter] postNotificationName:self.protocolString object:self userInfo:nil];
-
+    [[NSNotificationCenter defaultCenter] postNotificationName:self.notificationName object:self userInfo:nil];
 }
 
 - (void)clear {
-
     if (self.session != nil) {
         uint8_t buf[self.inputBufferSize];
-
-        // Clear everything out of the input stream
         while ([[self.session inputStream] hasBytesAvailable]) {
             [[self.session inputStream] read:buf maxLength:self.inputBufferSize];
         }
     }
-
     self.readBuffer = nil;
-
 }
 
 - (void)stream:(NSStream *)stream handleEvent:(NSStreamEvent)eventCode {
-    switch(eventCode) {
+    switch (eventCode) {
         case NSStreamEventErrorOccurred:
         case NSStreamEventEndEncountered: {
             [stream close];
-            [stream removeFromRunLoop:[NSRunLoop currentRunLoop]
-                              forMode:NSDefaultRunLoopMode];
-            stream = nil;
+            [stream removeFromRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
             self.session = nil;
             break;
         }
@@ -280,15 +224,12 @@
             [self readStreamData];
             break;
         }
-
         case NSStreamEventHasSpaceAvailable: {
             [self writeData];
             break;
         }
-        case NSStreamEventNone:
-        case NSStreamEventOpenCompleted: {
+        default:
             break;
-        }
     }
 }
 

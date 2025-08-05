@@ -61,7 +61,7 @@
 /*!
  @brief Add a subscribe callback ID and notification observer
  */
-- (void)addSubscribeCallbackAndObserver: (NSString *)subscribeCallbackId;
+- (void)addSubscribeCallbackAndObserver:(NSString *)subscribeCallbackId withDelimiter:(NSString *)delimiter;
 
 /*!
  @brief Remove the subscription observer notification
@@ -88,13 +88,14 @@
 @property (nonatomic, weak) id <CDVCommandDelegate> commandDelegate;
 @property (nonatomic, strong) NSString *protocolString;
 @property (nonatomic, assign) NSUInteger connectionId;
+@property (nonatomic, strong) NSString *notificationName;
 @property (nonatomic, strong) NSMutableData *readBuffer;
 @property (nonatomic, strong) NSMutableData *writeBuffer;
 @property (nonatomic) uint8_t inputBufferSize;
 @property (nonatomic, strong) NSString *connectCallbackId;
 @property (nonatomic, strong) NSString *subscribeCallbackId;
 @property (nonatomic, strong) NSString *readDelimiter;
-@property (nonatomic, strong) NSString *subscribeRawDataCallbackID;
+@property (nonatomic, strong) NSString *subscribeRawDataCallbackId;
 
 
 @end
