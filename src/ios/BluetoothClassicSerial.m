@@ -239,65 +239,70 @@
 
 - (void)discoverUnpaired:(CDVInvokedUrlCommand *)command {
 
-    [[EAAccessoryManager sharedAccessoryManager] showBluetoothAccessoryPickerWithNameFilter:nil completion:^(NSError *error){
+    // The picker is a UIKit presentation: it is asked for on the main thread, whichever queue the command arrived on.
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self giveTheAppDelegateAWindow];
+        [[EAAccessoryManager sharedAccessoryManager] showBluetoothAccessoryPickerWithNameFilter:nil completion:^(NSError *error){
 
-        // If the user hits the cancel button on the prompt then return fail.
-        if(error != nil &&
-           (
-            [error code] == EABluetoothAccessoryPickerResultCancelled
-            || [error code] == EABluetoothAccessoryPickerResultNotFound
-            || [error code] == EABluetoothAccessoryPickerResultFailed
-            )
-           ) {
+            // The user cancelled the picker, no accessory was found, or the selection failed: tell JavaScript which.
+            // (A second call while a picker is up also ends the first one with "Cancelled": that is iOS's doing.)
+            if(error != nil &&
+               (
+                [error code] == EABluetoothAccessoryPickerResultCancelled
+                || [error code] == EABluetoothAccessoryPickerResultNotFound
+                || [error code] == EABluetoothAccessoryPickerResultFailed
+                )
+               ) {
 
-            NSString *errorMessage;
-            if ([error code] == EABluetoothAccessoryPickerResultCancelled) {
-                errorMessage = @"Cancelled";
-            } else if ([error code] == EABluetoothAccessoryPickerResultNotFound) {
-                errorMessage = @"Device not found";
-            } else {
-                errorMessage = @"Device selection failed";
-            }
-
-            CDVPluginResult *pluginResult;
-            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:errorMessage];
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-
-        } else {
-
-            bool sendBackList = false;
-
-            // If the device was already connected send back the currently selected accessory.
-            if (error != nil && [error code] == EABluetoothAccessoryPickerAlreadyConnected) {
-
-                EAAccessory *accessory;
-
-                for (NSString *protocolString in accessory.protocolStrings ){
-                    CommunicationSession *session = [self getCommunicationSession:accessory.connectionID protocolString:protocolString];
-                    EAAccessory *connectionSessionAccessory = [session accessory];
-
-                    if (session != nil && [connectionSessionAccessory isConnected]) {
-                        NSMutableArray *dictArray = [[NSMutableArray alloc] init];
-                        [dictArray insertObject:accessory atIndex:0];
-                        NSArray *accessoryDetailsArray = [NSArray arrayWithArray:dictArray];
-                        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:accessoryDetailsArray];
-                        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-                        break;
-                    } else {
-                        sendBackList = true;
-                    }
+                NSString *errorMessage;
+                if ([error code] == EABluetoothAccessoryPickerResultCancelled) {
+                    errorMessage = @"Cancelled";
+                } else if ([error code] == EABluetoothAccessoryPickerResultNotFound) {
+                    errorMessage = @"Device not found";
+                } else {
+                    errorMessage = @"Device selection failed";
                 }
 
+                CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:errorMessage];
+                [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+                return;
             }
 
-            if (sendBackList) {
-                // Return a list of all devices
-                [self list:command];
-            }
+            // Selected and connected (error is nil), or the user picked a device that is connected already
+            // (EABluetoothAccessoryPickerAlreadyConnected, which Apple reports as an error and gives no accessory for):
+            // either way the answer is the accessories connected now. Before, the first left the call unanswered for
+            // good, and the second looped over an accessory that was never assigned.
+            [self list:command];
+        }];
+    });
 
+}
+
+/**
+ The system picker looks for the window to present in on the application delegate (`UIApplicationDelegate.window`) and,
+ when the delegate has that property and it is nil, shows nothing and never calls its completion block: the call just
+ hangs. Cordova's CDVAppDelegate declares `window`, and an app on the scene lifecycle (cordova-ios 8, and 7 with scenes)
+ never sets it, because the scene delegate owns the window; a delegate with no `window` property at all is not affected
+ (measured on iOS 26.6: the picker shows with a plain delegate, and not with CDVAppDelegate, whatever the root view
+ controller). So the key window of the active scene is given to the delegate before the call.
+ */
+- (void)giveTheAppDelegateAWindow {
+    id<UIApplicationDelegate> delegate = [UIApplication sharedApplication].delegate;
+    if (![delegate respondsToSelector:@selector(window)] || ![delegate respondsToSelector:@selector(setWindow:)] || delegate.window != nil) {
+        return;
+    }
+    UIWindow *keyWindow = self.viewController.view.window;
+    if (keyWindow == nil) {
+        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if (![scene isKindOfClass:[UIWindowScene class]] || scene.activationState != UISceneActivationStateForegroundActive) continue;
+            for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+                if (window.isKeyWindow) { keyWindow = window; }
+            }
         }
-    }];
-
+    }
+    if (keyWindow != nil) {
+        [delegate setWindow:keyWindow];
+    }
 }
 
 - (void)list:(CDVInvokedUrlCommand *)command {
