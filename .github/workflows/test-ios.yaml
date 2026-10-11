@@ -1,7 +1,7 @@
 name: iOS tests
 
 # The Objective-C and the device tests on an iOS simulator: no phone, no Bluetooth, and no system prompt to answer. The two jobs are
-# independent and run side by side. Called by pull-request.yaml when something they cover changes, and by publish.yaml.
+# independent and run side by side. Called by ci.yaml when something they cover changes, and for every push to main.
 on:
   workflow_call:
 

@@ -2,7 +2,7 @@ name: Android tests
 
 # The Java of src/android on the JVM with Robolectric, and the device tests of tests/ on an Android emulator, where the plugin is
 # installed into an app the way an app installs it and what an emulator without Bluetooth can answer is checked. Linux with KVM.
-# Called by pull-request.yaml when something it covers changes, and by publish.yaml.
+# Called by ci.yaml when something it covers changes, and for every push to main.
 on:
   workflow_call:
 

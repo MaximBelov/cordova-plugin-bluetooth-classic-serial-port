@@ -1,0 +1,136 @@
+name: CI
+
+# One workflow for what a change goes through, parameterised by what triggered it (see `plan`):
+#
+#   a pull request  runs the tests its change needs, and ends in `ci`, the one job the ruleset on main requires;
+#   a push to main  does the same for everything, then publishes the version in package.json to npm as `latest`.
+#
+# npm's trusted publishing is tied to this file name: the package's Settings > Trusted Publisher on npmjs.com must name this repository
+# and this file (ci.yaml), with no environment. There is no npm token to expire. A push that keeps the version publishes nothing, so a
+# release is a version bump merged to main.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+# A newer push to a pull request cancels the run before it. A push to main never cancels another: it may be the one that publishes.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.event.pull_request.number) || format('ci-{0}', github.ref) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # The two platforms, the JavaScript and the README have to agree before anything longer is run: every method has its native action
+  # where it should, what a platform lacks is written down and documented. It costs seconds, so it comes first.
+  parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: node --test test/unit/platform-parity.test.mjs
+
+  # Everything that depends on what triggered the run is decided here, once:
+  #   ios, android  which of the longer tests are needed: all of them for a push, and for a pull request the ones whose code, tests or
+  #                 shared files (the JavaScript, the manifest, the coverage floors, the workflow) it changes
+  #   publish       whether the run ends in a publish: a push to main
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ios: ${{ steps.plan.outputs.ios }}
+      android: ${{ steps.plan.outputs.android }}
+      publish: ${{ steps.plan.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            files=$(git diff --name-only "$BASE" HEAD)
+            echo "$files"
+            shared='tests/|www/|test/coverage/|plugin\.xml$|package\.json$|\.github/workflows/ci\.yaml$'
+            ios=$(echo "$files" | grep -Eq "^(src/ios/|test/ios/|$shared|\.github/workflows/test-ios\.yaml$)" && echo true || echo false)
+            android=$(echo "$files" | grep -Eq "^(src/android/|test/android/|$shared|\.github/workflows/test-android\.yaml$)" && echo true || echo false)
+            publish=false
+          else
+            ios=true
+            android=true
+            publish=true
+          fi
+          {
+            echo "ios=$ios"
+            echo "android=$android"
+            echo "publish=$publish"
+          } >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+  unit:
+    needs: parity
+    uses: ./.github/workflows/test.yaml
+
+  ios:
+    needs: [parity, plan]
+    if: needs.plan.outputs.ios == 'true'
+    uses: ./.github/workflows/test-ios.yaml
+
+  android:
+    needs: [parity, plan]
+    if: needs.plan.outputs.android == 'true'
+    uses: ./.github/workflows/test-android.yaml
+
+  # The one job the ruleset requires. A job that was skipped because the change does not need it is fine; one that failed or was
+  # cancelled is not.
+  ci:
+    if: always()
+    needs: [parity, plan, unit, ios, android]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULTS: ${{ needs.parity.result }} ${{ needs.plan.result }} ${{ needs.unit.result }} ${{ needs.ios.result }} ${{ needs.android.result }}
+        run: |
+          echo "parity plan unit ios android: $RESULTS"
+          for result in $RESULTS; do
+            case "$result" in
+              success|skipped) ;;
+              *) echo "a required job did not pass"; exit 1 ;;
+            esac
+          done
+
+  # Only a push to main gets here, and only when `ci` is green.
+  publish:
+    needs: [plan, ci]
+    if: success() && needs.plan.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write # npm's trusted publishing signs in with this
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          # npm 11.5 or newer is needed for trusted publishing
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+          # a publishing job does not restore a dependency cache (setup-node's advice for trusted publishing)
+          package-manager-cache: false
+      - name: Publish a version that is new
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "$name@$version is already published: nothing to do"
+            exit 0
+          fi
+          npm publish

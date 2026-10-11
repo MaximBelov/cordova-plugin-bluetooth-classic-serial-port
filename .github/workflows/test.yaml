@@ -1,6 +1,6 @@
 name: Tests
 
-# The Node tests. Called by pull-request.yaml for every pull request and by publish.yaml for a push to main or develop.
+# The Node tests. Called by ci.yaml, for every pull request and every push to main.
 on:
   workflow_call:
 
