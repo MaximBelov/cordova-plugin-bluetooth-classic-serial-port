@@ -1,0 +1,21 @@
+{
+  "name": "io.github.maximbelov.btclassic.demo",
+  "displayName": "BtClassicDemo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Demo of cordova-plugin-bluetooth-classic-serial-port",
+  "scripts": {
+    "plugin:pack": "node scripts/pack-plugin.mjs",
+    "ios:prepare": "cordova platform add ios --nosave && npm run plugin:pack",
+    "ios:build": "cordova build ios --device --debug --buildConfig=build.local.json",
+    "android:prepare": "cordova platform add android --nosave && npm run plugin:pack",
+    "android:build": "cordova build android --debug"
+  },
+  "devDependencies": {
+    "cordova-android": "^15.0.0",
+    "cordova-ios": "^8.0.0"
+  },
+  "cordova": {
+    "platforms": []
+  }
+}

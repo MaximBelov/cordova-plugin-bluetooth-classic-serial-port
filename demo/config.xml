@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="io.github.maximbelov.btclassic.demo" version="1.0.0" xmlns="http://www.w3.org/ns/widgets">
+    <name>BtClassicDemo</name>
+    <description>Demo of cordova-plugin-bluetooth-classic-serial-port: one button per plugin call, and the result of each shown on screen</description>
+    <content src="index.html" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <platform name="ios">
+        <preference name="WKWebViewOnly" value="true" />
+        <preference name="Orientation" value="portrait" />
+        <preference name="deployment-target" value="16.0" />
+        <!-- The system picker lists only accessories that speak one of these protocols (MFi). The demo declares one so the picker has something to filter on. -->
+        <edit-config target="UISupportedExternalAccessoryProtocols" file="*-Info.plist" mode="merge">
+            <array>
+                <string>io.github.maximbelov.btclassic.demo</string>
+            </array>
+        </edit-config>
+    </platform>
+</widget>

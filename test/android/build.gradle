@@ -1,0 +1,5 @@
+// The plugin's Java sources (src/android of the repository) built against cordova-android's framework and tested on the JVM with
+// Robolectric: no emulator and no Bluetooth. `npm run test:android` runs it.
+plugins {
+    id 'com.android.library' version '8.10.1' apply false
+}

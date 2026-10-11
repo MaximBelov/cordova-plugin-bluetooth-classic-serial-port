@@ -4,6 +4,18 @@
 #import <CoreBluetooth/CoreBluetooth.h>
 #import "CommunicationSession.h"
 
+/*!
+ @brief What shows the system accessory picker. The system one in the app, a fake in the tests.
+ */
+@protocol BluetoothClassicAccessoryPicker <NSObject>
+/// Shows the picker and calls `completion` with its result: nil when an accessory was selected and connected.
+- (void)showPickerWithCompletion:(void (^)(NSError *error))completion;
+@end
+
+/// The picker iOS provides (`EAAccessoryManager`).
+@interface BluetoothClassicSystemAccessoryPicker : NSObject <BluetoothClassicAccessoryPicker>
+@end
+
 @interface BluetoothClassicSerial : CDVPlugin <EAAccessoryDelegate, NSStreamDelegate, CBCentralManagerDelegate>
 
 /*!
@@ -67,10 +79,31 @@
 - (void)discoverUnpaired:(CDVInvokedUrlCommand *)command;
 
 /*!
+ @brief What iOS says about Bluetooth for this app, without asking for anything.
+ @discussion Answers an object with the Bluetooth authorization (notDetermined, restricted, denied or allowedAlways), the accessory protocols the app declares (UISupportedExternalAccessoryProtocols), the number of connected accessories and the iOS version. It creates no CBCentralManager, so it raises no permission prompt.
+
+ JavaScript API:
+ @code
+ bluetoothClassicSerial.getBluetoothState(successCallback, failCallback);
+ @endcode
+ */
+- (void)getBluetoothState:(CDVInvokedUrlCommand *)command;
+
+/*!
  @brief Gives the application delegate the key window when it has a `window` property and that is nil.
  @discussion The system accessory picker presents in the delegate's window and, when the delegate has the property and it is nil, shows nothing and never answers. Cordova's CDVAppDelegate is such a delegate in an app on scenes.
  */
 - (void)giveTheAppDelegateAWindow;
+
+/*!
+ @brief Gives `delegate` `window` when it has a `window` property that is nil. Answers whether it did.
+ */
++ (BOOL)giveDelegate:(id<UIApplicationDelegate>)delegate theWindow:(UIWindow *)window;
+
+/*!
+ @brief The message `discoverUnpaired` fails with for a picker result: "Cancelled", "Device not found" or "Device selection failed". Nil when the result is no failure (no error, or an accessory that is connected already).
+ */
++ (NSString *)failureMessageForPickerError:(NSError *)error;
 
 /*!
  @brief Check to see if Bluetooth is enabled on the target device.
@@ -256,6 +289,8 @@
 - (CommunicationSession *)getCommunicationSession:(NSUInteger)connectionId protocolString:(NSString *)protocolString;
 
 @property (nonatomic, strong) NSString *deviceDiscoveredCallbackId;
+/// What `discoverUnpaired` shows the picker with: the system one unless a test sets its own.
+@property (nonatomic, strong) id<BluetoothClassicAccessoryPicker> accessoryPicker;
 @property CBCentralManager* bluetoothManager;
 @property (nonatomic) bool bluetoothEnabled;
 @property (nonatomic, strong) NSMutableArray *communicationSessions;

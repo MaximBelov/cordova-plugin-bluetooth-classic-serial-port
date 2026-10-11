@@ -110,6 +110,43 @@ If you need to connect to another, disconnect, then connect to the required devi
 ```
 
 
+## iOS: Pair new device and the system picker
+
+The iOS side is built and tested for iOS 16 and later (the minimum of the test package and of the demo app).
+
+`discoverUnpaired` opens iOS's own "Select An Accessory" popup. It needs no Bluetooth permission and no MFi accessory nearby to open. It answers the list of connected accessories when the user picks one, and fails with `"Cancelled"`, `"Device not found"` or `"Device selection failed"` otherwise. A second call while the popup is up ends the first one with `"Cancelled"` (iOS does that).
+
+iOS presents the popup in the application delegate's `window`. Cordova's `CDVAppDelegate` has that property and an app on scenes (cordova-ios 8) never sets it, so the popup was never shown and the call never answered. The plugin hands the delegate the key window before the call when it has the property and it is `nil`.
+
+The Bluetooth permission prompt is raised when the plugin is created. With the default `IOS_INIT_ON_LOAD=false` that is the first call of any method, and a prompt that is up when the popup is asked for swallows the request, so the first `discoverUnpaired` of a fresh install can end without a popup. Set `IOS_INIT_ON_LOAD` to `true` and the prompt comes when the app starts instead.
+
+# Development
+
+`demo/` is a small Cordova app with one button per call and the answer on screen. `npm run test:unit` runs the JavaScript half on Node, with no phone: the API calls, and the automatic tests of `tests/` against a fake native. On a simulator, an emulator or a phone:
+
+    npm run test:paramedic:ios:simulator    # IOS_SIMULATOR=<name> to pick one; no phone needed: the calls that need no Bluetooth answer on a simulator too
+    npm run test:paramedic:ios:device       # with HW_IOS_UDID=<udid> to pick the phone
+    npm run test:paramedic:android          # with ANDROID_SERIAL=<serial>; an emulator that is running has one too (emulator-5554), and CI does exactly that
+    npm run test:paramedic:android:emulator # with ANDROID_AVD=<name>
+    HW_IOS_UDID=<udid> XCODE_ORG_ID=<team id> npm run test:appium:ios   # starts and stops its own Appium server
+    npm run test:ios                        # the Objective-C on an iOS simulator, with XCTest: no phone, no Bluetooth
+    npm run test:android                    # the Java on the JVM, with Robolectric (Gradle): no emulator, no Bluetooth
+    npm run test:unit:coverage              # also test:ios:coverage and test:android:coverage: the line coverage of each layer, against its floor
+
+The first two run the tests in `tests/` with cordova-paramedic (on iOS they need your signing in `demo/build.local.json`: copy `demo/build.json` and put your Apple team id in it; the copy is not tracked). The last one presses "Pair new device" in the demo on a clean install and looks for the system popup, which JavaScript cannot see.
+
+`npm run test:ios` builds `src/ios` against cordova-ios (`test/ios` is a Swift package whose source is a link to it) and runs the XCTest cases there: the messages `discoverUnpaired` answers for each picker result, that it answers every time, and the hand-over of the window to the application delegate. The picker itself is faked there, so whether it really shows is still the Appium probe's to say.
+
+On an iPhone the paramedic app is installed fresh each run, so iOS asks two things that a person has to answer with Allow while the run waits: the Bluetooth permission (raised when the plugin is created, on the first call) and the local network permission (the app talks to the test server on your computer). With the permission undecided, the `isEnabled` test is skipped rather than raising a third prompt of its own.
+
+`npm run test:android` builds `src/android` against cordova-android's framework (`test/android` is a small Gradle project whose source directory is `src/android`) and runs Robolectric tests on the JVM: how the plugin dispatches its actions, what it answers about a device nothing is connected to, how the adapter's state and the Bluetooth permissions turn into answers. A connection itself needs a phone.
+
+The coverage of each layer is measured with the tool of its platform (Node's own for the JavaScript, JaCoCo for the Java, llvm-cov for the Objective-C) and compared with a floor in `test/coverage/floors.json`. A floor is not a target: the Android and iOS tests run without a device, so the code that talks to Bluetooth (the connection threads and sessions) is mostly out of their reach, and the floors hold what is measured, so coverage cannot fall without somebody choosing to lower them. CI prints the numbers in the summary of each job and keeps the reports.
+
+`test/unit/platform-parity.test.mjs` keeps the platforms and the README in step: every JavaScript method has its action on Android and on iOS except those written down in the test (`connectInsecure`, `available`, `showBluetoothSettings` and `enable` are Android only, `getBluetoothState` is iOS only), and the README has a section and an index entry for each method and says what a platform lacks. It runs first in CI, before the longer tests.
+
+To try the plugin as it is on disk in the demo: `cd demo && npm install && npm run ios:prepare && npm run ios:build`.
+
 # Examples
 
 # API
@@ -135,8 +172,18 @@ If you need to connect to another, disconnect, then connect to the required devi
 - [bluetoothClassicSerial.showBluetoothSettings](#showbluetoothsettings)
 - [bluetoothClassicSerial.enable](#enable)
 - [bluetoothClassicSerial.discoverUnpaired](#discoverunpaired)
+- [bluetoothClassicSerial.getBluetoothState](#getbluetoothstate)
 - [bluetoothClassicSerial.setDeviceDiscoveredListener](#setdevicediscoveredlistener)
 - [bluetoothClassicSerial.clearDeviceDiscoveredListener](#cleardevicediscoveredlistener)
+
+| Method | Android | iOS |
+| --- | --- | --- |
+| `connect`, `disconnect`, `disconnectAll`, `write`, `read`, `readUntil`, `subscribe`, `unsubscribe`, `subscribeRawData`, `unsubscribeRawData`, `clear`, `list`, `isEnabled`, `isConnected`, `discoverUnpaired`, `setDeviceDiscoveredListener`, `clearDeviceDiscoveredListener` | yes | yes |
+| `connectInsecure`, `available`, `showBluetoothSettings`, `enable` | yes | **no** |
+| `getBluetoothState` | **no** | yes |
+
+A method a platform does not have is answered differently on each: Android calls the failure callback with an invalid action error, while on iOS Cordova only logs `Method ... not defined in Plugin` and calls **neither** callback, so a call to one of them never answers.
+
 
 ## connect
 
@@ -183,7 +230,7 @@ For Android, see [connect](#connect).
 
 #### iOS
 
-`connectInsecure` is **not supported**.
+`connectInsecure` is **not supported**. The iOS plugin has no such method: Cordova logs an error and calls neither callback.
 
 ### Parameters
 
@@ -209,7 +256,7 @@ Function `disconnect` disconnects the current connection.
 - __failure__: Error callback function, invoked when error occurs. [optional]
 
 
-## disconnect
+## disconnectAll
 ```
 bluetoothClassicSerial.disconnectAll(success, failure);
 ```
@@ -277,7 +324,7 @@ Function `available` gets the number of bytes of data available.  The bytes are 
 
 #### iOS
 
-`available` is **not supported**.
+`available` is **not supported**. The iOS plugin has no such method: Cordova logs an error and calls neither callback.
 
 ### Parameters
 
@@ -581,7 +628,7 @@ Function `showBluetoothSettings` opens the Bluetooth settings on the operating s
 
 #### iOS
 
-`showBluetoothSettings` is not supported.
+`showBluetoothSettings` is not supported. The iOS plugin has no such method: Cordova logs an error and calls neither callback.
 
 ### Parameters
 
@@ -605,7 +652,7 @@ Function `enable` prompts the user to enable Bluetooth. If `enable` is called wh
 
 #### iOS
 
-`enable` is **not supported**.
+`enable` is **not supported**. The iOS plugin has no such method: Cordova logs an error and calls neither callback.
 
 `enable` is only supported on Android and does not work on iOS.
 
@@ -679,6 +726,34 @@ bluetoothClassicSerial.discoverUnpaired(function(devices) {
     })
 }, failure);
 ```
+
+## getBluetoothState
+
+What iOS knows about Bluetooth for this app, without asking for anything.
+
+    bluetoothClassicSerial.getBluetoothState(success, failure);
+
+### Description
+
+Function `getBluetoothState` answers an object, and never raises the Bluetooth permission prompt:
+
+    {
+      authorization: "notDetermined" | "restricted" | "denied" | "allowedAlways" | "unknown",
+      supportedProtocols: ["com.acme.proto"],   // UISupportedExternalAccessoryProtocols of the app
+      connectedAccessories: 0,
+      systemVersion: "26.6"
+    }
+
+An app can use it to see whether the permission is decided before it calls something that would raise the prompt.
+
+#### Android
+
+`getBluetoothState` is **not supported**. The plugin has no such action, so Cordova calls the failure callback with an invalid action error.
+
+### Parameters
+
+- __success__: Success callback function that is invoked with the object above.
+- __failure__: Error callback function, invoked when error occurs. [optional]
 
 ## setDeviceDiscoveredListener
 

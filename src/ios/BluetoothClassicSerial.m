@@ -1,6 +1,16 @@
 #import "BluetoothClassicSerial.h"
 
+@implementation BluetoothClassicSystemAccessoryPicker
+
+- (void)showPickerWithCompletion:(void (^)(NSError *))completion {
+    [[EAAccessoryManager sharedAccessoryManager] showBluetoothAccessoryPickerWithNameFilter:nil completion:completion];
+}
+
+@end
+
 @implementation BluetoothClassicSerial
+
+@synthesize accessoryPicker = _accessoryPicker;
 
 - (void)pluginInitialize {
 
@@ -242,28 +252,13 @@
     // The picker is a UIKit presentation: it is asked for on the main thread, whichever queue the command arrived on.
     dispatch_async(dispatch_get_main_queue(), ^{
         [self giveTheAppDelegateAWindow];
-        [[EAAccessoryManager sharedAccessoryManager] showBluetoothAccessoryPickerWithNameFilter:nil completion:^(NSError *error){
+        [self.accessoryPicker showPickerWithCompletion:^(NSError *error) {
 
             // The user cancelled the picker, no accessory was found, or the selection failed: tell JavaScript which.
             // (A second call while a picker is up also ends the first one with "Cancelled": that is iOS's doing.)
-            if(error != nil &&
-               (
-                [error code] == EABluetoothAccessoryPickerResultCancelled
-                || [error code] == EABluetoothAccessoryPickerResultNotFound
-                || [error code] == EABluetoothAccessoryPickerResultFailed
-                )
-               ) {
-
-                NSString *errorMessage;
-                if ([error code] == EABluetoothAccessoryPickerResultCancelled) {
-                    errorMessage = @"Cancelled";
-                } else if ([error code] == EABluetoothAccessoryPickerResultNotFound) {
-                    errorMessage = @"Device not found";
-                } else {
-                    errorMessage = @"Device selection failed";
-                }
-
-                CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:errorMessage];
+            NSString *failure = [BluetoothClassicSerial failureMessageForPickerError:error];
+            if (failure != nil) {
+                CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:failure];
                 [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
                 return;
             }
@@ -278,6 +273,25 @@
 
 }
 
++ (NSString *)failureMessageForPickerError:(NSError *)error {
+    if (error == nil) {
+        return nil;
+    }
+    switch ([error code]) {
+        case EABluetoothAccessoryPickerResultCancelled: return @"Cancelled";
+        case EABluetoothAccessoryPickerResultNotFound: return @"Device not found";
+        case EABluetoothAccessoryPickerResultFailed: return @"Device selection failed";
+        default: return nil;
+    }
+}
+
+- (id<BluetoothClassicAccessoryPicker>)accessoryPicker {
+    if (_accessoryPicker == nil) {
+        _accessoryPicker = [[BluetoothClassicSystemAccessoryPicker alloc] init];
+    }
+    return _accessoryPicker;
+}
+
 /**
  The system picker looks for the window to present in on the application delegate (`UIApplicationDelegate.window`) and,
  when the delegate has that property and it is nil, shows nothing and never calls its completion block: the call just
@@ -287,10 +301,6 @@
  controller). So the key window of the active scene is given to the delegate before the call.
  */
 - (void)giveTheAppDelegateAWindow {
-    id<UIApplicationDelegate> delegate = [UIApplication sharedApplication].delegate;
-    if (![delegate respondsToSelector:@selector(window)] || ![delegate respondsToSelector:@selector(setWindow:)] || delegate.window != nil) {
-        return;
-    }
     UIWindow *keyWindow = self.viewController.view.window;
     if (keyWindow == nil) {
         for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
@@ -300,9 +310,36 @@
             }
         }
     }
-    if (keyWindow != nil) {
-        [delegate setWindow:keyWindow];
+    [BluetoothClassicSerial giveDelegate:[UIApplication sharedApplication].delegate theWindow:keyWindow];
+}
+
++ (BOOL)giveDelegate:(id<UIApplicationDelegate>)delegate theWindow:(UIWindow *)window {
+    if (window == nil || ![delegate respondsToSelector:@selector(window)] || ![delegate respondsToSelector:@selector(setWindow:)] || delegate.window != nil) {
+        return NO;
     }
+    [delegate setWindow:window];
+    return YES;
+}
+
+- (void)getBluetoothState:(CDVInvokedUrlCommand *)command {
+    // CBManager.authorization exists from iOS 13.1; before that there is no per-app Bluetooth permission to report.
+    NSString *authorization = @"unknown";
+    if (@available(iOS 13.1, *)) {
+        switch (CBManager.authorization) {
+            case CBManagerAuthorizationNotDetermined: authorization = @"notDetermined"; break;
+            case CBManagerAuthorizationRestricted: authorization = @"restricted"; break;
+            case CBManagerAuthorizationDenied: authorization = @"denied"; break;
+            case CBManagerAuthorizationAllowedAlways: authorization = @"allowedAlways"; break;
+        }
+    }
+    NSArray *protocols = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UISupportedExternalAccessoryProtocols"] ?: @[];
+    NSDictionary *state = @{
+        @"authorization": authorization,
+        @"supportedProtocols": protocols,
+        @"connectedAccessories": @([[[EAAccessoryManager sharedAccessoryManager] connectedAccessories] count]),
+        @"systemVersion": [[UIDevice currentDevice] systemVersion]
+    };
+    [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:state] callbackId:command.callbackId];
 }
 
 - (void)list:(CDVInvokedUrlCommand *)command {

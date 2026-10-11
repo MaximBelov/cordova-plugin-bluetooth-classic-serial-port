@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin xmlns="http://www.phonegap.com/ns/plugins/1.0" id="io.github.maximbelov.btclassic.demo.nativeprobe" version="1.0.0">
+    <name>NativeProbe</name>
+    <description>Demo-only: calls the system Bluetooth accessory picker straight from Objective-C, with none of the plugin's own code, so a failure can be told apart from the plugin's.</description>
+    <js-module src="www/native-probe.js" name="nativeProbe">
+        <clobbers target="window.nativeProbe" />
+    </js-module>
+    <platform name="ios">
+        <config-file target="config.xml" parent="/widget">
+            <feature name="NativeProbe">
+                <param name="ios-package" value="NativeProbe" />
+            </feature>
+        </config-file>
+        <source-file src="src/ios/NativeProbe.m" />
+        <framework src="ExternalAccessory.framework" />
+        <framework src="CoreBluetooth.framework" />
+    </platform>
+</plugin>

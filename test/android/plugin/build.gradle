@@ -1,0 +1,54 @@
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace = 'nz.co.soltius.cordova.test'
+    compileSdk = 36
+
+    defaultConfig {
+        minSdk = 24
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    sourceSets {
+        // The sources the plugin ships, not a copy of them.
+        main.java.srcDirs = ['../../../src/android']
+    }
+
+    buildTypes {
+        debug {
+            // the coverage of the unit tests: createDebugUnitTestCoverageReport
+            enableUnitTestCoverage = true
+        }
+    }
+
+    testOptions {
+        // The permissions the plugin asks for depend on the target SDK of the app it runs in (Android 12 and later: BLUETOOTH_SCAN
+        // and BLUETOOTH_CONNECT), and the plugin reads it once per process. 36 is what cordova-android 15 builds for.
+        targetSdk = 36
+        unitTests {
+            includeAndroidResources = true
+            all {
+                // Robolectric loads the classes under test through its own class loader
+                jacoco {
+                    includeNoLocationClasses = true
+                    excludes = ['jdk.internal.*']
+                }
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation 'org.apache.cordova:framework:15.1.0'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.17'
+    testImplementation 'androidx.test:core:1.6.1'
+    testImplementation 'org.mockito:mockito-core:5.14.2'
+}

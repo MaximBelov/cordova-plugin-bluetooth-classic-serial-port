@@ -1,0 +1,61 @@
+# Weekly updates for everything this repository depends on. Dependabot reads this file from the default branch only.
+#
+# Not listed on purpose: tests/ and demo/native-probe have no dependencies, and test/ios/Package.swift has one that is a local path
+# (cordova-ios from node_modules, so it follows the npm entries below), which Dependabot does not update. Add a `swift` entry for
+# /test/ios the day that package gets a remote dependency.
+#
+# cordova-android and cordova-ios (npm) and org.apache.cordova:framework (Gradle, test/android) are released together and belong
+# together: when one of them moves, move the others in the same step.
+version: 2
+
+updates:
+  # the workflows in .github/workflows
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ['*']
+    labels: [dependencies]
+
+  # the plugin's dev dependencies: the cordova CLI, the platforms and cordova-paramedic
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      cordova:
+        patterns: ['cordova', 'cordova-*']
+        update-types: [minor, patch]
+    labels: [dependencies]
+
+  # the demo app's platforms
+  - package-ecosystem: npm
+    directory: /demo
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      cordova:
+        patterns: ['cordova', 'cordova-*']
+        update-types: [minor, patch]
+    labels: [dependencies]
+
+  # the Android JVM tests (test/android): the Gradle plugin, Robolectric, JUnit, Mockito, cordova's framework and the Gradle wrapper
+  - package-ecosystem: gradle
+    directory: /test/android
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      android-tests:
+        patterns: ['*']
+        update-types: [minor, patch]
+    labels: [dependencies]

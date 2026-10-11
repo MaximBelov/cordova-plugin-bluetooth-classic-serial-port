@@ -1,0 +1,11 @@
+{
+  "name": "cordova-plugin-bluetooth-classic-serial-port-tests",
+  "version": "1.1.0",
+  "description": "Tests of cordova-plugin-bluetooth-classic-serial-port for cordova-plugin-test-framework (run by cordova-paramedic)",
+  "license": "UNLICENSED",
+  "private": true,
+  "cordova": {
+    "id": "cordova-plugin-bluetooth-classic-serial-port-tests",
+    "platforms": ["android", "ios"]
+  }
+}

@@ -87,7 +87,7 @@ module.exports = {
 
   // calls the success callback when new data is available with an ArrayBuffer
   subscribeRawData: function (deviceId, interfaceId, success, failure) {
-    successWrapper = function (data) {
+    const successWrapper = function (data) {
 
       // data = (typeof data === 'object') ? data : {};
       //
@@ -121,6 +121,12 @@ module.exports = {
 
   discoverUnpaired: function (success, failure) {
     exec(success, failure, "BluetoothClassicSerial", "discoverUnpaired", []);
+  },
+
+  // iOS only: the Bluetooth authorization, the declared accessory protocols and the connected accessories, without
+  // asking for anything (no permission prompt). Answers { authorization, supportedProtocols, connectedAccessories, systemVersion }.
+  getBluetoothState: function (success, failure) {
+    exec(success, failure, "BluetoothClassicSerial", "getBluetoothState", []);
   },
 
   setDeviceDiscoveredListener: function (notify) {
