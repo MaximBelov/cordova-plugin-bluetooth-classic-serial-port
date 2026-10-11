@@ -1,10 +1,23 @@
 name: Publishing
 
+# Publishes the version in package.json to npm when that version is not published yet: a push to main publishes it as `latest`, a
+# push to develop as `next`. A push that keeps the version publishes nothing, so a release is a version bump merged to main.
+#
+# It signs in with npm's trusted publishing (OpenID Connect), so there is no token to expire. That needs this repository and this
+# workflow file (publish.yaml) to be set as the package's trusted publisher: npmjs.com > the package > Settings > Trusted Publisher.
 on:
   push:
     branches:
       - main
       - develop
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publishing
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -13,16 +26,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # npm 11.5 or newer is needed for trusted publishing
+          node-version: 24
           registry-url: 'https://registry.npmjs.org'
-      - run: npm i
-      - name: Release
-        if: github.ref_name == 'main'
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Next
-        if: github.ref_name == 'develop'
-        run: npm publish --tag next
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish a version that is new
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "$name@$version is already published: nothing to do"
+            exit 0
+          fi
+          if [ "$GITHUB_REF_NAME" = "main" ]; then
+            npm publish
+          else
+            npm publish --tag next
+          fi

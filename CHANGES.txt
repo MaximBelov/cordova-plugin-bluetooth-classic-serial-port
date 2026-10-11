@@ -1,3 +1,6 @@
+= 1.1.1 =
+iOS: show the system accessory picker in apps on the scene lifecycle (cordova-ios 8) and always answer discoverUnpaired
+
 = 1.1.0 =
 iOS refactor: remove subscribeCallbackIds and subscribeRawCallbackIds
 
