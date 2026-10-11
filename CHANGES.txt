@@ -1,3 +1,10 @@
+= 2.0.0 =
+iOS: add getBluetoothState, the Bluetooth authorization and the declared accessory protocols, without raising the permission prompt
+subscribeRawData no longer leaks successWrapper as a global
+Tests for the JavaScript, for the Objective-C (XCTest), for the Java (Robolectric) and cordova-paramedic tests for a simulator, an emulator and a phone, a demo app, and a CI that publishes only when they pass
+README: a table of the methods each platform has, and what a call to a method a platform lacks does
+The iOS side is built and tested for iOS 16 and later, the Android side for target SDK 36
+
 = 1.1.1 =
 iOS: show the system accessory picker in apps on the scene lifecycle (cordova-ios 8) and always answer discoverUnpaired
 
