@@ -35,5 +35,33 @@
       "name": "Kogulan Naskaran",
       "email": "kogulan.baskaran@gmail.com"
     }
-  ]
+  ],
+  "files": [
+    "plugin.xml",
+    "www",
+    "src",
+    "README.md",
+    "LICENSE.txt",
+    "CHANGES.txt"
+  ],
+  "scripts": {
+    "test": "node --test test/unit/*.test.mjs",
+    "test:unit": "node --test test/unit/*.test.mjs",
+    "test:unit:coverage": "mkdir -p coverage && node --test --experimental-test-coverage --test-coverage-include='www/**' --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/js.lcov test/unit/*.test.mjs && node test/coverage/summarize.mjs js",
+    "test:paramedic:ios:device": "cordova-paramedic --platform ios --plugin . --device --target=$HW_IOS_UDID --appId io.github.maximbelov.btclassic.paramedic --args=--buildConfig=$PWD/demo/build.local.json",
+    "test:paramedic:ios:simulator": "cordova-paramedic --platform ios --plugin . --target=$(node test/ios/simulator.mjs --paramedic)",
+    "test:paramedic:android": "cordova-paramedic --platform android --plugin . --device --target=$ANDROID_SERIAL",
+    "test:paramedic:android:emulator": "cordova-paramedic --platform android --plugin . --target=$ANDROID_AVD",
+    "test:appium:ios": "node test/appium/run-ios.mjs",
+    "test:ios": "cd test/ios && xcodebuild test -scheme BluetoothClassicSerial -destination \"platform=iOS Simulator,name=$(node simulator.mjs)\"",
+    "test:ios:coverage": "cd test/ios && ./coverage.sh && cd ../.. && node test/coverage/summarize.mjs ios",
+    "test:android": "cd test/android && ./gradlew test",
+    "test:android:coverage": "cd test/android && ./gradlew createDebugUnitTestCoverageReport && cd ../.. && node test/coverage/summarize.mjs android"
+  },
+  "devDependencies": {
+    "cordova": "^13.0.0",
+    "cordova-android": "^15.1.0",
+    "cordova-ios": "^8.1.1",
+    "cordova-paramedic": "npm:cordova-paramedic-hotfix@2.0.0-hotfix.1"
+  }
 }

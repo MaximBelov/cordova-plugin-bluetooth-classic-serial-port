@@ -1,0 +1,24 @@
+name: Tests
+
+# The Node tests. Called by pull-request.yaml for every pull request and by publish.yaml for a push to main or develop.
+on:
+  workflow_call:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          # the coverage reporter needs a current Node
+          node-version: 24
+      - run: npm run test:unit:coverage
+      - name: Keep the coverage report
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: coverage-js
+          path: coverage/js.lcov
+          if-no-files-found: ignore

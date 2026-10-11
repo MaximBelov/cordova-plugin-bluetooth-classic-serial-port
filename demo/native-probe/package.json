@@ -1,0 +1,7 @@
+{
+  "name": "io.github.maximbelov.btclassic.demo.nativeprobe",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Demo-only: the system Bluetooth accessory picker called straight from Objective-C",
+  "cordova": { "id": "io.github.maximbelov.btclassic.demo.nativeprobe", "platforms": ["ios"] }
+}

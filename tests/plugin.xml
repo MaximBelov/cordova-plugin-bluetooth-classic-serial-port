@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The plugin's tests for cordova-plugin-test-framework: `npm run test:paramedic:ios:device | android` (cordova-paramedic) installs this beside
+     the plugin and runs `defineAutoTests` on the phone; `defineManualTests` is for a person (the system's accessory picker cannot be
+     answered by an automatic test; test/appium drives it). Not published: package.json `files` leaves `tests/` out. -->
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" id="cordova-plugin-bluetooth-classic-serial-port-tests" version="1.1.0">
+    <name>Bluetooth Classic Serial Tests</name>
+    <license>UNLICENSED</license>
+
+    <js-module src="tests.js" name="tests" />
+</plugin>

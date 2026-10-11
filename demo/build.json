@@ -1,0 +1,11 @@
+{
+  "ios": {
+    "debug": {
+      "developmentTeam": "YOUR_TEAM_ID",
+      "codeSignIdentity": "Apple Development",
+      "packageType": "development",
+      "automaticProvisioning": true,
+      "buildFlag": ["-quiet", "GCC_WARN_INHIBIT_ALL_WARNINGS=YES"]
+    }
+  }
+}

@@ -1,0 +1,87 @@
+name: CI
+
+# Every pull request runs this. It decides which tests the change needs, runs them, and ends in one job, `ci`, that is red when any
+# of them is red, cancelled or missing, and that is red as well when the platforms and the README do not agree. That job is what the ruleset on main and develop requires, so a pull request that does not
+# touch the native code is not left waiting for tests that never start.
+on:
+  pull_request:
+
+# A newer push to a pull request cancels the run before it.
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # The two platforms, the JavaScript and the README have to agree before anything longer is run: every method has its native action
+  # where it should, what a platform lacks is written down and documented. It costs seconds, so it comes first.
+  parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: node --test test/unit/platform-parity.test.mjs
+
+  # What the pull request changes decides which of the longer tests it needs.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ios: ${{ steps.diff.outputs.ios }}
+      android: ${{ steps.diff.outputs.android }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          files=$(git diff --name-only "$BASE" HEAD)
+          echo "$files"
+          shared='tests/|www/|test/coverage/|plugin\.xml$|package\.json$'
+          if echo "$files" | grep -Eq "^(src/ios/|test/ios/|$shared|\.github/workflows/(test-ios|pull-request)\.yaml$)"; then
+            echo "ios=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ios=false" >> "$GITHUB_OUTPUT"
+          fi
+          if echo "$files" | grep -Eq "^(src/android/|test/android/|$shared|\.github/workflows/(test-android|pull-request)\.yaml$)"; then
+            echo "android=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "android=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  unit:
+    needs: parity
+    uses: ./.github/workflows/test.yaml
+
+  ios:
+    needs: [parity, changes]
+    if: needs.changes.outputs.ios == 'true'
+    uses: ./.github/workflows/test-ios.yaml
+
+  android:
+    needs: [parity, changes]
+    if: needs.changes.outputs.android == 'true'
+    uses: ./.github/workflows/test-android.yaml
+
+  # The one job the ruleset requires. A job that was skipped because the change does not need it is fine; one that failed or was
+  # cancelled is not.
+  ci:
+    if: always()
+    needs: [parity, changes, unit, ios, android]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULTS: ${{ needs.parity.result }} ${{ needs.changes.result }} ${{ needs.unit.result }} ${{ needs.ios.result }} ${{ needs.android.result }}
+        run: |
+          echo "parity changes unit ios android: $RESULTS"
+          for result in $RESULTS; do
+            case "$result" in
+              success|skipped) ;;
+              *) echo "a required job did not pass"; exit 1 ;;
+            esac
+          done

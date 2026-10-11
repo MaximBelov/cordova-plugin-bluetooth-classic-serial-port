@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>BtClassicDemo</title>
+  <style>
+    body { font: 16px -apple-system, system-ui, sans-serif; margin: 0; padding: env(safe-area-inset-top) 16px 24px; }
+    h1 { font-size: 20px; margin: 16px 0 8px; }
+    button { display: block; width: 100%; margin: 8px 0; padding: 14px; font-size: 16px; border: 0; border-radius: 10px; background: #0a7; color: #fff; }
+    pre { background: #111; color: #9f9; padding: 10px; border-radius: 8px; min-height: 160px; white-space: pre-wrap; word-break: break-word; font-size: 13px; }
+    .state { font-size: 13px; color: #555; }
+  </style>
+</head>
+<body>
+  <h1>Bluetooth Classic Serial</h1>
+  <div class="state" id="state">waiting for deviceready</div>
+  <button id="pair" data-cy="pair">Pair new device (system picker)</button>
+  <button id="nativePicker" data-cy="nativePicker">Native picker (no plugin code)</button>
+  <button id="pluginState" data-cy="pluginState">Bluetooth state (plugin)</button>
+  <button id="nativeState" data-cy="nativeState">Delegate window (native)</button>
+  <button id="list" data-cy="list">List connected</button>
+  <button id="enabled" data-cy="enabled">Is Bluetooth enabled</button>
+  <button id="disconnectAll" data-cy="disconnectAll">Disconnect all</button>
+  <button id="clear" data-cy="clear">Clear log</button>
+  <pre id="log" data-cy="log"></pre>
+  <script src="cordova.js"></script>
+  <script>
+    var logEl = document.getElementById('log');
+    // Every call writes one line, "<call>: ok <result>" or "<call>: fail <reason>", so a probe can read the outcome off the page.
+    window.results = [];
+    function show(call, kind, value) {
+      var text = typeof value === 'string' ? value : JSON.stringify(value);
+      var line = call + ': ' + kind + ' ' + text;
+      window.results.push({ call: call, kind: kind, value: value, at: Date.now() });
+      logEl.textContent = line + '\n' + logEl.textContent;
+    }
+    function run(call, fn) {
+      show(call, 'started', '');
+      try { fn(function (v) { show(call, 'ok', v === undefined ? '' : v); }, function (e) { show(call, 'fail', e === undefined ? '' : e); }); }
+      catch (e) { show(call, 'threw', String(e)); }
+    }
+    document.addEventListener('deviceready', function () {
+      var api = window.bluetoothClassicSerial;
+      document.getElementById('state').textContent = api ? 'ready: ' + cordova.platformId + ' ' + (cordova.version || '') : 'ready, but the plugin is missing';
+      document.getElementById('pair').onclick = function () { run('discoverUnpaired', api.discoverUnpaired.bind(api)); };
+      document.getElementById('nativePicker').onclick = function () { run('nativePicker', window.nativeProbe.showPicker.bind(window.nativeProbe)); };
+      document.getElementById('pluginState').onclick = function () { run('getBluetoothState', api.getBluetoothState.bind(api)); };
+      document.getElementById('nativeState').onclick = function () { run('nativeState', window.nativeProbe.state.bind(window.nativeProbe)); };
+      document.getElementById('list').onclick = function () { run('list', api.list.bind(api)); };
+      document.getElementById('enabled').onclick = function () { run('isEnabled', api.isEnabled.bind(api)); };
+      document.getElementById('disconnectAll').onclick = function () { run('disconnectAll', api.disconnectAll.bind(api)); };
+      document.getElementById('clear').onclick = function () { logEl.textContent = ''; window.results = []; };
+    }, false);
+  </script>
+</body>
+</html>
