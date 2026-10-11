@@ -67,6 +67,12 @@
 - (void)discoverUnpaired:(CDVInvokedUrlCommand *)command;
 
 /*!
+ @brief Gives the application delegate the key window when it has a `window` property and that is nil.
+ @discussion The system accessory picker presents in the delegate's window and, when the delegate has the property and it is nil, shows nothing and never answers. Cordova's CDVAppDelegate is such a delegate in an app on scenes.
+ */
+- (void)giveTheAppDelegateAWindow;
+
+/*!
  @brief Check to see if Bluetooth is enabled on the target device.
  @discussion If bluetooth is enabled the success callback is fired. If it's not then failCallback is fired.
 
