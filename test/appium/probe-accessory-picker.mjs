@@ -11,16 +11,16 @@
  * What it caught: on cordova-ios 8 (CDVAppDelegate.window is nil in an app on scenes) the picker was never shown and the call never answered.
  * The demo installs the plugin with IOS_INIT_ON_LOAD=true, so the Bluetooth permission prompt comes at launch and not in the middle of the call.
  *
-* Environment: HW_IOS_UDID (required; `xcrun xctrace list devices`), XCODE_ORG_ID (required: your Apple team id, WebDriverAgent is signed with it), APPIUM_URL (default http://127.0.0.1:4723, needs the usual
+* Environment: IOS_UDID (required; `xcrun xctrace list devices`), XCODE_ORG_ID (required: your Apple team id, WebDriverAgent is signed with it), APPIUM_URL (default http://127.0.0.1:4723, needs the usual
  * XCUITest setup), APP_BUNDLE (default io.github.maximbelov.btclassic.demo).
  */
 import { setTimeout as sleep } from 'node:timers/promises';
 
 const appium = process.env.APPIUM_URL ?? 'http://127.0.0.1:4723';
-const udid = process.env.HW_IOS_UDID;
+const udid = process.env.IOS_UDID;
 const bundleId = process.env.APP_BUNDLE ?? 'io.github.maximbelov.btclassic.demo';
 if (!udid || !process.env.XCODE_ORG_ID) {
-  console.error('HW_IOS_UDID (xcrun xctrace list devices) and XCODE_ORG_ID (your Apple team id) are required');
+  console.error('IOS_UDID (xcrun xctrace list devices) and XCODE_ORG_ID (your Apple team id) are required');
   process.exit(2);
 }
 

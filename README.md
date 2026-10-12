@@ -125,10 +125,10 @@ The Bluetooth permission prompt is raised when the plugin is created. With the d
 `demo/` is a small Cordova app with one button per call and the answer on screen. `npm run test:unit` runs the JavaScript half on Node, with no phone: the API calls, and the automatic tests of `tests/` against a fake native. On a simulator, an emulator or a phone:
 
     npm run test:paramedic:ios:simulator    # IOS_SIMULATOR=<name> to pick one; no phone needed: the calls that need no Bluetooth answer on a simulator too
-    npm run test:paramedic:ios:device       # with HW_IOS_UDID=<udid> to pick the phone
+    npm run test:paramedic:ios:device       # with IOS_UDID=<udid> to pick the phone
     npm run test:paramedic:android          # with ANDROID_SERIAL=<serial>; an emulator that is running has one too (emulator-5554), and CI does exactly that
     npm run test:paramedic:android:emulator # with ANDROID_AVD=<name>
-    HW_IOS_UDID=<udid> XCODE_ORG_ID=<team id> npm run test:appium:ios   # starts and stops its own Appium server
+    IOS_UDID=<udid> XCODE_ORG_ID=<team id> npm run test:appium:ios   # starts and stops its own Appium server
     npm run test:ios                        # the Objective-C on an iOS simulator, with XCTest: no phone, no Bluetooth
     npm run test:android                    # the Java on the JVM, with Robolectric (Gradle): no emulator, no Bluetooth
     npm run test:unit:coverage              # also test:ios:coverage and test:android:coverage: the line coverage of each layer, against its floor
@@ -148,6 +148,17 @@ The coverage of each layer is measured with the tool of its platform (Node's own
 To try the plugin as it is on disk in the demo: `cd demo && npm install && npm run ios:prepare && npm run ios:build`.
 
 The demo runs on the ionic web view plugin (`cordova-plugin-ionic-webview` from npm). That plugin presents `alert`, `confirm` and `prompt` from the application delegate's window, which an app on scenes never sets, so the dialogs are not shown and the page stays blocked; `demo/patches/webview-dialogs.patch` is a fix and `demo/patches/webview-deployment-target.patch` comments out the plugin's `deployment-target` preference of 11.0, which would lower the iOS deployment target of the app; `npm run ios:prepare` applies both. The two JavaScript dialog buttons of the demo show whether the web view can present them.
+
+`test/appium/probe-demo.mjs` checks the dialogs and the accessory picker of the demo on one iPhone or iPad, driven natively (the demo's buttons are found by label, a dialog is read from the alert endpoint and the page log from the native tree). It says "shown", "NOT SHOWN" or "no verdict" for each, and a negative verdict needs proof: the page log shows the call started and, for the picker, Bluetooth is on. A device with Bluetooth off, or a simulator, gives no verdict for the picker, with the reason. The demo has to be a build for that device (`npm run ios:build` for a phone, `cordova build ios --emulator --debug` for a simulator).
+
+    TARGET=local IOS_UDID=<udid> [XCODE_ORG_ID=<team id>] APPIUM_URL=<server> node test/appium/probe-demo.mjs
+
+`TARGET=testingbot` and `TARGET=browserstack` run it on a cloud device (`DEVICE`, `OS_VERSION`, `APP_URL` and the vendor's keys, see the header of the file). `test/appium/run-cloud.mjs` uploads the build and runs the probe over the devices of `test/appium/devices.json`, with a table at the end:
+
+    node test/appium/run-cloud.mjs upload testingbot demo/platforms/ios/build/Debug-iphoneos/BtClassicDemo.ipa   # prints tb://...
+    node test/appium/run-cloud.mjs run testingbot tb://... [--only "iPhone 14"] [--os 17.6] [--parallel 1]
+
+What to expect from the clouds: TestingBot runs one session at a time and an old device (iPhone 8) is slow to give a session and to answer, so a device that does not give one within `--wait-ms` is skipped; BrowserStack names only the major iOS version and has Bluetooth off on most iPhones, so read the Bluetooth column before the picker's.
 
 # Examples
 

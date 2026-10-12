@@ -48,7 +48,7 @@
     "test": "node --test test/unit/*.test.mjs",
     "test:unit": "node --test test/unit/*.test.mjs",
     "test:unit:coverage": "mkdir -p coverage && node --test --experimental-test-coverage --test-coverage-include='www/**' --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/js.lcov test/unit/*.test.mjs && node test/coverage/summarize.mjs js",
-    "test:paramedic:ios:device": "cordova-paramedic --platform ios --plugin . --device --target=$HW_IOS_UDID --appId io.github.maximbelov.btclassic.paramedic --args=--buildConfig=$PWD/demo/build.local.json",
+    "test:paramedic:ios:device": "cordova-paramedic --platform ios --plugin . --device --target=$IOS_UDID --appId io.github.maximbelov.btclassic.paramedic --args=--buildConfig=$PWD/demo/build.local.json",
     "test:paramedic:ios:simulator": "cordova-paramedic --platform ios --plugin . --target=$(node test/ios/simulator.mjs --paramedic)",
     "test:paramedic:android": "cordova-paramedic --platform android --plugin . --device --target=$ANDROID_SERIAL",
     "test:paramedic:android:emulator": "cordova-paramedic --platform android --plugin . --target=$ANDROID_AVD",

@@ -3,7 +3,7 @@
 /**
  * Runs the picker probe on a phone with an Appium server of its own, so nothing has to be started by hand:
  *
- *   HW_IOS_UDID=<udid> XCODE_ORG_ID=<team id> npm run test:appium:ios
+ *   IOS_UDID=<udid> XCODE_ORG_ID=<team id> npm run test:appium:ios
  *
  * It takes a free port, starts `appium server` there (the `appium` command and its xcuitest driver must be installed), waits until
  * the server answers, runs probe-accessory-picker.mjs against it and stops the server again, whatever the probe's outcome.

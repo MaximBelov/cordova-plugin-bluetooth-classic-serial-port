@@ -13,3 +13,5 @@ test/android/plugin/build
 test/android/local.properties
 /coverage/
 test/ios/.build
+/test/appium/results/
+/test/appium/probe-demo-out/
