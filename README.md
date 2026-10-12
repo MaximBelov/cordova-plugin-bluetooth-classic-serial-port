@@ -147,6 +147,8 @@ The coverage of each layer is measured with the tool of its platform (Node's own
 
 To try the plugin as it is on disk in the demo: `cd demo && npm install && npm run ios:prepare && npm run ios:build`.
 
+The demo runs on the ionic web view plugin (`cordova-plugin-ionic-webview` from npm). That plugin presents `alert`, `confirm` and `prompt` from the application delegate's window, which an app on scenes never sets, so the dialogs are not shown and the page stays blocked; `demo/patches/webview-dialogs.patch` is a fix and `demo/patches/webview-deployment-target.patch` comments out the plugin's `deployment-target` preference of 11.0, which would lower the iOS deployment target of the app; `npm run ios:prepare` applies both. The two JavaScript dialog buttons of the demo show whether the web view can present them.
+
 # Examples
 
 # API

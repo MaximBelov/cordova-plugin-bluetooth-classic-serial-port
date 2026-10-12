@@ -2,5 +2,6 @@ node_modules
 platforms
 plugins
 .plugin
+.web-view-plugin
 www/cordova*.js
 *.tgz

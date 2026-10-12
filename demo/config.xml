@@ -7,6 +7,7 @@
     <allow-intent href="https://*/*" />
     <platform name="ios">
         <preference name="WKWebViewOnly" value="true" />
+        <preference name="CordovaWebViewEngine" value="CDVWKWebViewEngine" />
         <preference name="Orientation" value="portrait" />
         <preference name="deployment-target" value="16.0" />
         <!-- The system picker lists only accessories that speak one of these protocols (MFi). The demo declares one so the picker has something to filter on. -->

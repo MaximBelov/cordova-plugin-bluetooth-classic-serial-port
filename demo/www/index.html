@@ -22,6 +22,8 @@
   <button id="list" data-cy="list">List connected</button>
   <button id="enabled" data-cy="enabled">Is Bluetooth enabled</button>
   <button id="disconnectAll" data-cy="disconnectAll">Disconnect all</button>
+  <button id="alert" data-cy="alert">JavaScript alert</button>
+  <button id="confirm" data-cy="confirm">JavaScript confirm</button>
   <button id="clear" data-cy="clear">Clear log</button>
   <pre id="log" data-cy="log"></pre>
   <script src="cordova.js"></script>
@@ -50,6 +52,9 @@
       document.getElementById('list').onclick = function () { run('list', api.list.bind(api)); };
       document.getElementById('enabled').onclick = function () { run('isEnabled', api.isEnabled.bind(api)); };
       document.getElementById('disconnectAll').onclick = function () { run('disconnectAll', api.disconnectAll.bind(api)); };
+      // A dialog the web view cannot present leaves the page blocked, so a call that never returns is the failure.
+      document.getElementById('alert').onclick = function () { show('alert', 'started', ''); alert('dialog test'); show('alert', 'ok', ''); };
+      document.getElementById('confirm').onclick = function () { show('confirm', 'started', ''); var answer = confirm('dialog test'); show('confirm', 'ok', answer); };
       document.getElementById('clear').onclick = function () { logEl.textContent = ''; window.results = []; };
     }, false);
   </script>

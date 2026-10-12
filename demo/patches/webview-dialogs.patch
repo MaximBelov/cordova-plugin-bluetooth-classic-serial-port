@@ -1,0 +1,78 @@
+diff --git a/node_modules/cordova-plugin-ionic-webview/src/ios/CDVWKWebViewUIDelegate.m b/node_modules/cordova-plugin-ionic-webview/src/ios/CDVWKWebViewUIDelegate.m
+index a7a16f2..0e3136d 100644
+--- a/node_modules/cordova-plugin-ionic-webview/src/ios/CDVWKWebViewUIDelegate.m
++++ b/node_modules/cordova-plugin-ionic-webview/src/ios/CDVWKWebViewUIDelegate.m
+@@ -31,6 +31,19 @@
+     return self;
+ }
+ 
++// The application delegate's window is nil in a cordova-ios 8 app on scenes (the scene owns the window), so the dialogs are
++// presented from the web view's own window: its root view controller, or whatever is presented on top of it.
++- (UIViewController*)presenterForWebView:(WKWebView*)webView
++{
++    UIViewController* presenter = webView.window.rootViewController;
++
++    while (presenter.presentedViewController != nil && ![presenter.presentedViewController isBeingDismissed]) {
++        presenter = presenter.presentedViewController;
++    }
++
++    return presenter;
++}
++
+ - (void)     webView:(WKWebView*)webView runJavaScriptAlertPanelWithMessage:(NSString*)message
+     initiatedByFrame:(WKFrameInfo*)frame completionHandler:(void (^)(void))completionHandler
+ {
+@@ -48,9 +61,15 @@
+ 
+     [alert addAction:ok];
+ 
+-    UIViewController* rootController = [UIApplication sharedApplication].delegate.window.rootViewController;
++    UIViewController* presenter = [self presenterForWebView:webView];
+ 
+-    [rootController presentViewController:alert animated:YES completion:nil];
++    if (presenter == nil) {
++        // Nothing to present from: WebKit requires the completion handler to be called, or the page stays blocked
++        completionHandler();
++        return;
++    }
++
++    [presenter presentViewController:alert animated:YES completion:nil];
+ }
+ 
+ - (void)     webView:(WKWebView*)webView runJavaScriptConfirmPanelWithMessage:(NSString*)message
+@@ -79,9 +98,15 @@
+         }];
+     [alert addAction:cancel];
+ 
+-    UIViewController* rootController = [UIApplication sharedApplication].delegate.window.rootViewController;
++    UIViewController* presenter = [self presenterForWebView:webView];
++
++    if (presenter == nil) {
++        // Nothing to present from: WebKit requires the completion handler to be called, or the page stays blocked
++        completionHandler(NO);
++        return;
++    }
+ 
+-    [rootController presentViewController:alert animated:YES completion:nil];
++    [presenter presentViewController:alert animated:YES completion:nil];
+ }
+ 
+ - (void)      webView:(WKWebView*)webView runJavaScriptTextInputPanelWithPrompt:(NSString*)prompt
+@@ -115,9 +140,15 @@
+         textField.text = defaultText;
+     }];
+ 
+-    UIViewController* rootController = [UIApplication sharedApplication].delegate.window.rootViewController;
++    UIViewController* presenter = [self presenterForWebView:webView];
++
++    if (presenter == nil) {
++        // Nothing to present from: WebKit requires the completion handler to be called, or the page stays blocked
++        completionHandler(nil);
++        return;
++    }
+ 
+-    [rootController presentViewController:alert animated:YES completion:nil];
++    [presenter presentViewController:alert animated:YES completion:nil];
+ }
+ 
+ @end
