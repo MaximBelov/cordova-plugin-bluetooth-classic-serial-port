@@ -1,0 +1,21 @@
+{
+  "testingbot": [
+    { "device": "iPhone 8", "os": "16.7" },
+    { "device": "iPhone SE 2022", "os": "17.5" },
+    { "device": "iPhone 14", "os": "17.6" },
+    { "device": "iPhone 17", "os": "26.0" },
+    { "device": "iPhone Air", "os": "26.2" },
+    { "device": "iPhone 16", "os": "26.5" }
+  ],
+  "browserstack": [
+    { "device": "iPhone 14", "os": "16" },
+    { "device": "iPad 10th", "os": "16" },
+    { "device": "iPhone 13", "os": "17" },
+    { "device": "iPhone 15", "os": "17" },
+    { "device": "iPhone 14", "os": "18" },
+    { "device": "iPhone 16", "os": "18" },
+    { "device": "iPhone 14", "os": "26" },
+    { "device": "iPhone 17", "os": "26" },
+    { "device": "iPhone 15", "os": "27" }
+  ]
+}
