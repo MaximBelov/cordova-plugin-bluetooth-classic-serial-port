@@ -114,10 +114,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: read
+      contents: write # the tag and the release
       id-token: write # npm's trusted publishing signs in with this
     steps:
       - uses: actions/checkout@v7
+        with:
+          # the whole history: the tag goes on the commit that first carried the version
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           # npm 11.5 or newer is needed for trusted publishing
@@ -134,3 +137,26 @@ jobs:
             exit 0
           fi
           npm publish
+      - name: Tag and release the version that is on npm
+        # After the publish, and only after it: the tag goes on the commit the version was published from (the first one on main that
+        # carries it), and the release takes the version's block of the changelog. Both are left alone when they exist, so a re-run
+        # adds what is missing and changes nothing else.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          tag="$version"
+          commit=$(node scripts/release.mjs commit "$version")
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+            echo "$tag is already on origin"
+          else
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              tag -a "$tag" -m "$version" "$commit"
+            git push origin "refs/tags/$tag"
+          fi
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "release $tag exists"
+          else
+            node scripts/release.mjs notes "$version" > "$RUNNER_TEMP/notes.md"
+            gh release create "$tag" --verify-tag --title "$version" --notes-file "$RUNNER_TEMP/notes.md"
+          fi

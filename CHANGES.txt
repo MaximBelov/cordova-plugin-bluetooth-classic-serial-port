@@ -1,3 +1,6 @@
+= next =
+CI: a published version gets its git tag (<version>, as the tags before it) on the commit it was published from, and a GitHub release with its block of this file; scripts/release.mjs finds both, and back-fills an older version by hand
+
 = 2.0.0 =
 iOS: add getBluetoothState, the Bluetooth authorization and the declared accessory protocols, without raising the permission prompt
 subscribeRawData no longer leaks successWrapper as a global
